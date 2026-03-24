@@ -1,18 +1,25 @@
-FROM quay.io/jupyterhub/jupyterhub:latest
+FROM quay.io/jupyterhub/jupyterhub:5.3.0
 
-RUN cd /srv/jupyterhub && jupyterhub --generate-config && \
-    echo "c.JupyterHub.authenticator_class = 'dummy'" >> jupyterhub_config.py && \
-    echo "c.DummyAuthenticator.password = 'demo'" >> jupyterhub_config.py && \
-    pip install --no-cache-dir notebook
+ARG NB_USER=jovyan
+ARG NB_UID=1000
 
-ENV PATH=/opt/conda/bin:$PATH
-RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /root/miniforge.sh && \
-    bash /root/miniforge.sh -b -p /opt/conda && rm /root/miniforge.sh
+ENV USER=${NB_USER}
+ENV NB_UID=${NB_UID}
+ENV HOME=/home/${NB_USER}
 
-# marimo in conda environment (user packages available)
-RUN /opt/conda/bin/pip install --no-cache-dir 'marimo>=0.19.11'
+RUN python3 -m pip install --no-cache-dir \
+    notebook \
+    jupyterlab \
+    "marimo>=0.19.11" \
+    marimo-jupyter-extension
 
-# marimo-jupyter-extension in Jupyter's environment
-RUN /usr/bin/pip install --no-cache-dir marimo-jupyter-extension
+RUN adduser --disabled-password \
+    --gecos "Default user" \
+    --uid ${NB_UID} \
+    ${NB_USER}
 
-RUN useradd -ms /bin/bash demo
+COPY . ${HOME}
+RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
+
+USER ${NB_USER}
+WORKDIR ${HOME}
