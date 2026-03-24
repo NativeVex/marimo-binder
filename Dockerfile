@@ -13,6 +13,11 @@ RUN python3 -m pip install --no-cache-dir \
     "marimo>=0.19.11" \
     marimo-jupyter-extension
 
+RUN python3 -c "import sys; print(sys.executable)" && \
+    jupyter lab path && \
+    jupyter labextension list && \
+    jupyter server extension list
+
 RUN adduser --disabled-password \
     --gecos "Default user" \
     --uid ${NB_UID} \
@@ -23,3 +28,5 @@ RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
 
 USER ${NB_USER}
 WORKDIR ${HOME}
+
+EXPOSE 8888

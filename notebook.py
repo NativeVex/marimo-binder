@@ -1,6 +1,6 @@
 import marimo
 
-app = marimo.App()
+app = marimo.App(width="medium")
 
 @app.cell
 def _():
@@ -9,7 +9,13 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md("# Hello from Binder + marimo")
+    mo.md(
+        """
+        # Hello from Binder + marimo
+
+        This notebook is running inside JupyterHub/Binder with the marimo integration working.
+        """
+    )
     return
 
 if __name__ == "__main__":
