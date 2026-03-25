@@ -25,8 +25,10 @@ RUN adduser --disabled-password \
 
 COPY . ${HOME}
 RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
+RUN chmod +x ${HOME}/entrypoint.sh
 
 USER ${NB_USER}
 WORKDIR ${HOME}
 
+ENTRYPOINT ["/home/jovyan/entrypoint.sh"]
 EXPOSE 8888
