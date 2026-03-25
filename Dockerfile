@@ -30,5 +30,5 @@ RUN chmod +x ${HOME}/entrypoint.sh
 USER ${NB_USER}
 WORKDIR ${HOME}
 
-ENTRYPOINT ["/home/jovyan/entrypoint.sh"]
+ENTRYPOINT ["/home/${NB_USER}/entrypoint.sh"]
 EXPOSE 8888
