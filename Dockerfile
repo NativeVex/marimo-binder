@@ -25,3 +25,9 @@ RUN chmod +x ${HOME}/.binder/start
 
 USER ${NB_USER}
 WORKDIR ${HOME}
+
+# If this image is used by Binder/repo2docker, a Dockerfile disables repo2docker's
+# automatic .binder/start wiring. Make it explicit so runtime behavior matches
+# the repo2docker/Binder expectation.
+ENTRYPOINT ["/home/jovyan/.binder/start"]
+CMD ["jupyterhub-singleuser"]
