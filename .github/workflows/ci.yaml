@@ -23,6 +23,14 @@ jobs:
           push: false
           tags: marimo-binder:ci
 
+      - name: "Smoke: shipped versions (informational)"
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash marimo-binder:ci -lc '
+            set -euo pipefail
+            python3 -c "import marimo, marimo_jupyter_extension; print(\"marimo\", getattr(marimo, \"__version__\", \"?\")); print(\"marimo_jupyter_extension\", getattr(marimo_jupyter_extension, \"__version__\", \"?\"))"
+          '
+
       - name: "Smoke: entrypoint starts marimo"
         run: |
           set -euo pipefail
