@@ -21,7 +21,7 @@ RUN adduser --disabled-password \
 COPY . ${HOME}
 RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
 
-RUN chmod +x ${HOME}/start
+RUN chmod +x ${HOME}/.binder/start
 
 USER ${NB_USER}
 WORKDIR ${HOME}
