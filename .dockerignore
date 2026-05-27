@@ -19,4 +19,4 @@ venv/
 *.der
 id_rsa
 id_ed25519
-.aider.chat.history.md
+.aider*
