@@ -7,16 +7,18 @@ ENV USER=${NB_USER}
 ENV NB_UID=${NB_UID}
 ENV HOME=/home/${NB_USER}
 
-RUN python3 -m pip install --no-cache-dir \
-    notebook \
-    jupyterlab \
-    "marimo>=0.19.11" \
-    marimo-jupyter-extension
-
 RUN adduser --disabled-password \
     --gecos "Default user" \
     --uid ${NB_UID} \
     ${NB_USER}
+
+COPY requirements.txt ${HOME}/requirements.txt
+
+# System-level python deps baked into the image (avoid network at runtime)
+RUN python3 -m pip install --no-cache-dir \
+    notebook \
+    jupyterlab \
+    -r ${HOME}/requirements.txt
 
 COPY . ${HOME}
 RUN chown -R ${NB_UID}:${NB_UID} ${HOME}

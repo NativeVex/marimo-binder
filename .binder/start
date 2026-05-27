@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Install repo python deps (binder runtime)
-python -m pip install --no-cache-dir -r requirements.txt
+# Dependencies are installed at image build time (see Dockerfile).
+# Keep this start script network-free and fast.
 
 # Ensure Jupyter Server can import marimo_redirect from this repo
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
