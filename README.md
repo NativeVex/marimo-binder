@@ -8,7 +8,7 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
 
 - `Dockerfile`
   - builds from `quay.io/jupyterhub/jupyterhub:5.3.0`
-  - bakes Python deps into the image (`notebook`, `jupyterlab`, plus `requirements.txt`)
+  - bakes Python deps into the image (from `requirements.txt`; pinned for reproducibility)
   - sets:
     - `ENTRYPOINT ["/home/jovyan/.binder/start"]`
     - `CMD ["jupyterhub-singleuser"]`

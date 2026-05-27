@@ -15,10 +15,7 @@ RUN adduser --disabled-password \
 COPY requirements.txt ${HOME}/requirements.txt
 
 # System-level python deps baked into the image (avoid network at runtime)
-RUN python3 -m pip install --no-cache-dir \
-    notebook \
-    jupyterlab \
-    -r ${HOME}/requirements.txt
+RUN python3 -m pip install --no-cache-dir -r ${HOME}/requirements.txt
 
 COPY . ${HOME}
 RUN chown -R ${NB_UID}:${NB_UID} ${HOME}

@@ -1,3 +1,12 @@
 # Keep deps pinned for reproducibility (Binder / repo2docker builds)
+#
+# NOTE: the Dockerfile installs from this file at build time; `.binder/start` must remain
+# network-free and fast.
+
+# Jupyter UI/runtime (pinned so builds don't float)
+notebook==7.5.6
+jupyterlab==4.5.7
+
+# App + extension
 marimo==0.23.8
 marimo-jupyter-extension==0.2.3
