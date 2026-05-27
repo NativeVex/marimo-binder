@@ -1,1 +1,13 @@
 .aider*
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Common local artifacts
+.DS_Store
