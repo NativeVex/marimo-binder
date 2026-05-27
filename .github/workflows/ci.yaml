@@ -19,6 +19,16 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          load: false
+          load: true
           push: false
           tags: marimo-binder:ci
+
+      - name: "Smoke: entrypoint starts marimo"
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash marimo-binder:ci -lc '
+            set -euo pipefail
+            /home/jovyan/.binder/start true
+            sleep 1
+            ps aux | grep -F "marimo edit notebook.py" | grep -v grep
+          '
