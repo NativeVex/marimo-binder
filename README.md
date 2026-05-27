@@ -27,18 +27,16 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
 
 ## Local validation (no real JupyterHub required)
 
-Build the image:
+Build the image (same semantics as CI):
 
-  docker build -t marimo-binder:local .
+  ./scripts/docker-build.sh
 
-Smoke check the entrypoint (asserts marimo started):
+Smoke check (builds, then runs the same checks as CI):
 
-  docker run --rm --entrypoint /bin/bash marimo-binder:local -lc '
-    set -euo pipefail
-    /home/jovyan/.binder/start true
-    sleep 1
-    ps aux | grep -F "marimo edit notebook.py" | grep -v grep
-  '
+  ./scripts/docker-smoke.sh
+
+Notes:
+- Override the image tag with `IMAGE=...` (default: `marimo-binder:local`).
 
 ## Important limitation (expected)
 
