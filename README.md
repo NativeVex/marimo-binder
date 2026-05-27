@@ -48,4 +48,9 @@ For local development, prefer the smoke check above unless you have a real Hub e
 
 ## CI
 
-GitHub Actions builds the Dockerfile and runs a smoke check that asserts `.binder/start` actually starts marimo (process-level check).
+GitHub Actions runs two jobs:
+
+- `docker-build`: builds the Dockerfile
+- `docker-smoke`: runs smoke checks against the built image
+  - prints shipped versions (`marimo`, `marimo_jupyter_extension`)
+  - asserts `.binder/start` actually starts marimo (process-level check)
