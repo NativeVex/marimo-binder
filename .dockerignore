@@ -8,6 +8,9 @@ README.md
 # Local dev helpers (not used by the container entrypoint)
 scripts/
 
+docker-compose.yml
+jupyterhub/
+
 __pycache__/
 *.py[cod]
 .pytest_cache/

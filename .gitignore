@@ -17,6 +17,11 @@ venv/
 .env.*
 .secrets*
 
+# Local JupyterHub dev harness state (generated)
+# Keep runtime state out of the repo; compose uses a named volume.
+jupyterhub/data/
+jupyterhub/jupyterhub_cookie_secret
+
 # Private keys/certs (defense-in-depth ignore)
 *.key
 *.pem
