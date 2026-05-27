@@ -8,7 +8,13 @@ set -euo pipefail
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 
 # Start marimo behind Jupyter's proxy
-marimo edit notebook.py --host 0.0.0.0 --port 2718 --headless &
+#
+# IMPORTANT: In Binder/JupyterHub the user is already authenticated upstream
+# (cookies + hub auth). If marimo also requires its own access token, the root
+# redirect to /proxy/2718/ won't include it and the marimo UI will not load.
+# Therefore we disable marimo's session-token auth here and rely on the Hub.
+marimo edit notebook.py --host 0.0.0.0 --port 2718 --headless --no-token &
+
 
 # Hand off to the default CMD (jupyterhub singleuser / jupyter lab)
 exec "$@"
