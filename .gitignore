@@ -11,3 +11,19 @@ venv/
 
 # Common local artifacts
 .DS_Store
+
+# Local env/secrets (never commit real creds)
+.env
+.env.*
+.secrets*
+
+# Private keys/certs (defense-in-depth ignore)
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+id_rsa
+id_ed25519
