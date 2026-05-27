@@ -20,7 +20,8 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`
-  - enables `marimo_redirect` and `marimo_jupyter_extension`
+  - enables `marimo_redirect` as a Jupyter Server extension
+  - note: `marimo_jupyter_extension` is installed (see `requirements.txt`) but is not required for the root-redirect behavior
 
 - `marimo_redirect.py`
   - redirects `/` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/2718/` (JupyterHub proxy path)
