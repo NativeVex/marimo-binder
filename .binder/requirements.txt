@@ -1,0 +1,14 @@
+# Binder / repo2docker Python deps
+#
+# repo2docker (2025.12.0) looks for requirements.txt under the binder dir
+# when a `.binder/` directory exists.
+#
+# Keep deps pinned for reproducibility.
+
+# Jupyter UI/runtime (pinned so builds don't float)
+notebook==7.5.6
+jupyterlab==4.5.7
+
+# App + extension
+marimo==0.23.8
+marimo-jupyter-extension==0.2.3

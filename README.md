@@ -1,6 +1,6 @@
 # marimo-binder
 
-A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo app (`notebook.py`).
+A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo app (`marimo_app.py`).
 
 This repo intentionally uses the **advanced repo2docker path**: it contains a `Dockerfile`. In repo2docker/Binder semantics, that means other config mechanisms (e.g. `.binder/*`) are *not* auto-wired unless the Dockerfile wires them explicitly.
 
@@ -16,7 +16,7 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
 - `.binder/start`
   - MUST be network-free and fast (deps are installed at image build time)
   - exports `PYTHONPATH="$PWD:$PYTHONPATH"` so `marimo_redirect.py` is importable
-  - starts marimo headless on port 2718 (`marimo edit ... --headless &`)
+  - starts marimo headless on port 2718 (`marimo edit ... --headless --no-token &`)
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`
@@ -25,6 +25,8 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
 
 - `marimo_redirect.py`
   - redirects `/` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/2718/` (JupyterHub proxy path)
+
+NOTE: the marimo app file is intentionally NOT named `notebook.py`, because that name shadows the `notebook` python package that `jupyter notebook` imports (breaking repo2docker local runs).
 
 ## Local validation (no real JupyterHub required)
 
