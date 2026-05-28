@@ -1,1 +1,34 @@
 .aider*
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Common local artifacts
+.DS_Store
+
+# Local env/secrets (never commit real creds)
+.env
+.env.*
+.secrets*
+
+# Local JupyterHub dev harness state (generated)
+# Keep runtime state out of the repo; compose uses a named volume.
+jupyterhub/data/
+jupyterhub/jupyterhub_cookie_secret
+
+# Private keys/certs (defense-in-depth ignore)
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+id_rsa
+id_ed25519

@@ -1,0 +1,33 @@
+.git
+.github
+
+# Docs / repo metadata (not needed at runtime)
+README.md
+.context.md
+
+# Local dev helpers (not used by the container entrypoint)
+scripts/
+
+docker-compose.yml
+jupyterhub/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+.env.*
+.secrets*
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+id_rsa
+id_ed25519
+.aider*

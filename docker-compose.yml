@@ -1,0 +1,23 @@
+services:
+  hub:
+    build:
+      context: ./jupyterhub
+      dockerfile: Dockerfile
+    image: marimo-binder-hub:local
+    container_name: marimo-binder-hub
+    restart: unless-stopped
+
+    # This environment cannot create user-defined docker networks (iptables DOCKER-FORWARD chain missing).
+    # Using host networking avoids compose network creation.
+    network_mode: host
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jupyterhub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro
+      - hub-data:/data
+
+    # JupyterHub reads config via -f/--config; env var isn't sufficient.
+    command: ["jupyterhub", "-f", "/srv/jupyterhub/jupyterhub_config.py"]
+
+volumes:
+  hub-data:
