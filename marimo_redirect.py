@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlencode
 
 import tornado.web
 from jupyter_server.utils import url_path_join
@@ -12,7 +13,20 @@ def _load_jupyter_server_extension(server_app):
 
     class _RedirectToMarimo(tornado.web.RequestHandler):
         def get(self):
-            self.redirect(target, permanent=False)
+            # Preserve the Jupyter Server token query param if present.
+            #
+            # Why:
+            # - On some BinderHub/JupyterHub deployments, the "ready" URL is opened as
+            #   /user/<server>/ (optionally with ?token=...). If we drop the token when
+            #   redirecting, the user lands on Jupyter Server's /login page instead of
+            #   reaching the proxied marimo app.
+            # - Under a real JupyterHub-authenticated browser session the token is
+            #   irrelevant, so preserving it is harmless.
+            token = self.get_query_argument("token", default="")
+            dest = target
+            if token:
+                dest = dest + "?" + urlencode({"token": token})
+            self.redirect(dest, permanent=False)
 
     # Key behavior: redirect the Jupyter Server *root* (/) into the Hub proxy path
     # for marimo. This avoids having to know the runtime user prefix ahead of time.
