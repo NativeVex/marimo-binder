@@ -4,23 +4,25 @@ Binder (launch directly into marimo UI):
 
   https://mybinder.org/v2/gh/<OWNER>/<REPO>/<REF>?urlpath=proxy%2F2718%2F
 
-A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo app (`marimo_app.py`).
+A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo notebook (`notebooks/algorithms/visualizing-embeddings.py`) in dev/editor mode.
 
 This repo intentionally uses the **advanced repo2docker path**: it contains a `Dockerfile`. In repo2docker/Binder semantics, that means other config mechanisms (e.g. `.binder/*`) are *not* auto-wired unless the Dockerfile wires them explicitly.
 
 ## How it works (high level)
 
 - `Dockerfile`
-  - builds from `quay.io/jupyterhub/jupyterhub:5.3.0`
+  - builds from `quay.io/jupyterhub/jupyterhub:5.4.6`
   - bakes Python deps into the image (from `requirements.txt`; pinned for reproducibility)
   - sets:
     - `ENTRYPOINT ["/home/jovyan/.binder/start"]`
     - `CMD ["jupyterhub-singleuser"]`
 
 - `.binder/start`
-  - MUST be network-free and fast (deps are installed at image build time)
+  - SHOULD be network-free and fast (deps are installed at image build time)
+    - note: the demo notebook itself may fetch datasets at runtime
   - exports `PYTHONPATH="$PWD:$PYTHONPATH"` so `marimo_redirect.py` is importable
-  - starts marimo headless on port 2718 (`marimo edit ... --headless --no-token &`)
+  - starts marimo headless on port 2718 in *dev/editor view* (`marimo edit ... --headless --no-token &`)
+    - default notebook: `notebooks/algorithms/visualizing-embeddings.py`
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`

@@ -10,6 +10,7 @@ def _load_jupyter_server_extension(server_app):
     base_url = web_app.settings.get("base_url", "/")
     hub_prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX", base_url)
     target = url_path_join(hub_prefix, "proxy/2718/")
+    dev_target = url_path_join(hub_prefix, "proxy/2719/")
 
     class _RedirectToMarimo(tornado.web.RequestHandler):
         def get(self):
@@ -28,6 +29,19 @@ def _load_jupyter_server_extension(server_app):
                 dest = dest + "?" + urlencode({"token": token})
             self.redirect(dest, permanent=False)
 
+    class _RedirectToMarimoDev(tornado.web.RequestHandler):
+        def get(self):
+            # Dev/editor entrypoint.
+            #
+            # Keep the same token-preservation behavior as the root redirect so
+            # environments that still rely on a ?token=... query param keep
+            # working when the user switches into dev mode.
+            token = self.get_query_argument("token", default="")
+            dest = dev_target
+            if token:
+                dest = dest + "?" + urlencode({"token": token})
+            self.redirect(dest, permanent=False)
+
     # Key behavior: redirect the Jupyter Server *root* (/) into the Hub proxy path
     # for marimo. This avoids having to know the runtime user prefix ahead of time.
     #
@@ -39,5 +53,6 @@ def _load_jupyter_server_extension(server_app):
         ".*$",
         [
             (url_path_join(base_url, r"/?"), _RedirectToMarimo),
+            (url_path_join(base_url, r"/dev/?"), _RedirectToMarimoDev),
         ],
     )
