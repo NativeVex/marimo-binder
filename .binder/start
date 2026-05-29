@@ -13,9 +13,9 @@ export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 # (cookies + hub auth). If marimo also requires its own access token, the root
 # redirect to /proxy/2718/ won't include it and the marimo UI will not load.
 # Therefore we disable marimo's session-token auth here and rely on the Hub.
-# Run in *app* view by default (read-only) so the Binder landing URL
-# opens the demo without showing the editor.
-marimo run marimo_app.py --host 0.0.0.0 --port 2718 --headless --no-token &
+#
+# Default to *dev* mode so the editor is available (can switch views from the UI).
+marimo edit notebooks/algorithms/visualizing-embeddings.py --host 0.0.0.0 --port 2718 --headless --no-token &
 
 
 # Hand off to the default CMD (jupyterhub singleuser / jupyter lab)

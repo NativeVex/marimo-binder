@@ -4,7 +4,7 @@ Binder (launch directly into marimo UI):
 
   https://mybinder.org/v2/gh/<OWNER>/<REPO>/<REF>?urlpath=proxy%2F2718%2F
 
-A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo app (`marimo_app.py`).
+A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo notebook (`notebooks/algorithms/visualizing-embeddings.py`) in dev/editor mode.
 
 This repo intentionally uses the **advanced repo2docker path**: it contains a `Dockerfile`. In repo2docker/Binder semantics, that means other config mechanisms (e.g. `.binder/*`) are *not* auto-wired unless the Dockerfile wires them explicitly.
 
