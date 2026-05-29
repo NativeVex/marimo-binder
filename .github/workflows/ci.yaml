@@ -48,3 +48,60 @@ jobs:
             sleep 1
             ps aux | grep -F "marimo run marimo_app.py" | grep -v grep
           '
+
+  cml-comment:
+    runs-on: ubuntu-latest
+    needs: [docker-smoke]
+    if: github.event_name == 'pull_request'
+    container: ghcr.io/iterative/cml:0-dvc2-base1
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # NOTE: We run inside the official CML container so this job is stable
+      # under both GitHub Actions and local `act` (avoids Node/ABI + canvas builds).
+
+      - name: "CML: comment Binder link"
+        shell: bash
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Use PR head ref when available; fall back to ref name for pushes.
+          REF="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+
+          cat > report.md <<'MD'
+          ## Binder preview
+
+          Launch directly into the marimo UI:
+
+          MD
+
+          echo "https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
+
+          cat >> report.md <<'MD'
+
+          Notes:
+          - CI `docker-smoke` verifies `.binder/start` starts `marimo run marimo_app.py`.
+          - Binder builds from the branch/ref above; availability depends on Binder queue/build time.
+          MD
+
+          # Local `act` runs are not expected to post PR comments; skip.
+          if [ -n "${ACT:-}" ]; then
+            echo "NOTE: ACT is set; skipping PR comment (local run)."
+            cat report.md
+            exit 0
+          fi
+
+          # Also skip if no token was provided.
+          if [ -z "${REPO_TOKEN:-}" ]; then
+            echo "NOTE: REPO_TOKEN is empty; skipping PR comment."
+            cat report.md
+            exit 0
+          fi
+
+          cml comment create report.md
