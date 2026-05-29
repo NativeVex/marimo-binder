@@ -15,7 +15,7 @@ export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 # Therefore we disable marimo's session-token auth here and rely on the Hub.
 # Run in *app* view by default (read-only) so the Binder landing URL
 # opens the demo without showing the editor.
-marimo run notebooks/algorithms/visualizing-embeddings.py --host 0.0.0.0 --port 2718 --headless --no-token &
+marimo run marimo_app.py --host 0.0.0.0 --port 2718 --headless --no-token &
 
 
 # Hand off to the default CMD (jupyterhub singleuser / jupyter lab)

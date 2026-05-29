@@ -11,8 +11,6 @@ jupyterlab==4.5.7
 marimo==0.23.8
 marimo-jupyter-extension==0.2.3
 
-# Demo notebook deps (vendored marimo gallery example)
+# Demo app deps (keep lightweight for reliable builds)
 matplotlib==3.10.8
 pandas==3.0.0
-pymde==0.3.0
-torch==2.10.0

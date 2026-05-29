@@ -4,7 +4,7 @@ Binder (launch directly into marimo UI):
 
   https://mybinder.org/v2/gh/<OWNER>/<REPO>/<REF>?urlpath=proxy%2F2718%2F
 
-A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo app (`notebooks/algorithms/visualizing-embeddings.py`).
+A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo app (`marimo_app.py`).
 
 This repo intentionally uses the **advanced repo2docker path**: it contains a `Dockerfile`. In repo2docker/Binder semantics, that means other config mechanisms (e.g. `.binder/*`) are *not* auto-wired unless the Dockerfile wires them explicitly.
 
@@ -22,7 +22,7 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
     - note: the demo notebook itself may fetch datasets at runtime
   - exports `PYTHONPATH="$PWD:$PYTHONPATH"` so `marimo_redirect.py` is importable
   - starts marimo headless on port 2718 in *app view* (`marimo run ... --headless --no-token &`)
-    - default notebook: `notebooks/algorithms/visualizing-embeddings.py` (vendored from the marimo gallery examples)
+    - default app: `marimo_app.py` (lightweight; chosen for reliable builds)
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`
