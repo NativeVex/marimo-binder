@@ -54,6 +54,10 @@ jobs:
     needs: [docker-smoke]
     if: github.event_name == 'pull_request'
     container: ghcr.io/iterative/cml:0-dvc2-base1
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
