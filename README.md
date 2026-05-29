@@ -21,8 +21,8 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
   - SHOULD be network-free and fast (deps are installed at image build time)
     - note: the demo notebook itself may fetch datasets at runtime
   - exports `PYTHONPATH="$PWD:$PYTHONPATH"` so `marimo_redirect.py` is importable
-  - starts marimo headless on port 2718 in *app view* (`marimo run ... --headless --no-token &`)
-    - default app: `marimo_app.py` (lightweight; chosen for reliable builds)
+  - starts marimo headless on port 2718 in *dev/editor view* (`marimo edit ... --headless --no-token &`)
+    - default notebook: `notebooks/algorithms/visualizing-embeddings.py`
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`
