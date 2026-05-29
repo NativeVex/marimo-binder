@@ -1,7 +1,7 @@
-FROM quay.io/jupyterhub/jupyterhub:5.3.0
+FROM quay.io/jupyterhub/jupyterhub:5.4.6
 
 ARG NB_USER=jovyan
-ARG NB_UID=1000
+ARG NB_UID=1001
 
 ENV USER=${NB_USER}
 ENV NB_UID=${NB_UID}

@@ -11,16 +11,18 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
 ## How it works (high level)
 
 - `Dockerfile`
-  - builds from `quay.io/jupyterhub/jupyterhub:5.3.0`
+  - builds from `quay.io/jupyterhub/jupyterhub:5.4.6`
   - bakes Python deps into the image (from `requirements.txt`; pinned for reproducibility)
   - sets:
     - `ENTRYPOINT ["/home/jovyan/.binder/start"]`
     - `CMD ["jupyterhub-singleuser"]`
 
 - `.binder/start`
-  - MUST be network-free and fast (deps are installed at image build time)
+  - SHOULD be network-free and fast (deps are installed at image build time)
+    - note: the demo notebook itself may fetch datasets at runtime
   - exports `PYTHONPATH="$PWD:$PYTHONPATH"` so `marimo_redirect.py` is importable
-  - starts marimo headless on port 2718 (`marimo edit ... --headless --no-token &`)
+  - starts marimo headless on port 2718 in *app view* (`marimo run ... --headless --no-token &`)
+    - default app: `marimo_app.py` (lightweight; chosen for reliable builds)
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`
