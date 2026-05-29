@@ -46,7 +46,7 @@ jobs:
             set -euo pipefail
             /home/jovyan/.binder/start true
             sleep 1
-            ps aux | grep -F "marimo run marimo_app.py" | grep -v grep
+            ps aux | grep -F "marimo edit notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
           '
 
   cml-comment:
@@ -86,7 +86,7 @@ jobs:
           cat >> report.md <<'MD'
 
           Notes:
-          - CI `docker-smoke` verifies `.binder/start` starts `marimo run marimo_app.py`.
+          - CI `docker-smoke` verifies `.binder/start` starts `marimo edit notebooks/algorithms/visualizing-embeddings.py`.
           - Binder builds from the branch/ref above; availability depends on Binder queue/build time.
           MD
 
