@@ -12,3 +12,12 @@ jupyterlab==4.5.7
 # App + extension
 marimo==0.23.8
 marimo-jupyter-extension==0.2.3
+
+# Demo app deps
+matplotlib==3.10.8
+pandas==3.0.0
+
+# Heavy demo notebook deps (visualizing-embeddings)
+# NOTE: these are large; expect slower Binder builds.
+pymde==0.3.0
+torch==2.10.0
