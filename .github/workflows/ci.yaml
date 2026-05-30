@@ -46,6 +46,7 @@ jobs:
             set -euo pipefail
             /home/jovyan/.binder/start true
             sleep 1
+            ps aux | grep -F "marimo run notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
             ps aux | grep -F "marimo edit notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
           '
 
@@ -81,12 +82,18 @@ jobs:
 
           MD
 
-          echo "https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
+          echo "mybinder.org (app): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
+          echo "mybinder.org (dev): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2719%2F" >> report.md
+          echo "" >> report.md
+          echo "binderhub.saucy.haus (app): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
+          echo "binderhub.saucy.haus (dev): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2719%2F" >> report.md
 
           cat >> report.md <<'MD'
 
           Notes:
-          - CI `docker-smoke` verifies `.binder/start` starts `marimo edit notebooks/algorithms/visualizing-embeddings.py`.
+          - CI `docker-smoke` verifies `.binder/start` starts BOTH:
+            - `marimo run notebooks/algorithms/visualizing-embeddings.py` (app, 2718)
+            - `marimo edit notebooks/algorithms/visualizing-embeddings.py` (dev, 2719)
           - Binder builds from the branch/ref above; availability depends on Binder queue/build time.
           MD
 
