@@ -21,8 +21,6 @@ with app.setup:
     import pymde
     import torch
 
-    mnist = pymde.datasets.MNIST()
-
 
 @app.cell(hide_code=True)
 def _():
@@ -50,8 +48,12 @@ def compute_embedding(embedding_dim, constraint):
         mo.md("Your embedding is being computed ... hang tight!").callout(kind="warn")
     )
 
+    # NOTE: avoid dataset download at import time. Binder startup can be sensitive
+    # to import-time side effects.
+    _mnist = pymde.datasets.MNIST()
+
     mde = pymde.preserve_neighbors(
-        mnist.data,
+        _mnist.data,
         embedding_dim=embedding_dim,
         constraint=constraint,
         device="cuda" if torch.cuda.is_available() else "cpu",
@@ -77,7 +79,8 @@ def _(constraint, embedding_dimension):
 
 @app.cell
 def _(embedding):
-    ax = pymde.plot(embedding, color_by=mnist.attributes["digits"])
+    _mnist = pymde.datasets.MNIST()
+    ax = pymde.plot(embedding, color_by=_mnist.attributes["digits"])
     ax = mo.ui.matplotlib(ax)
     ax
     return (ax,)
@@ -126,7 +129,8 @@ def _(mask, table):
 @app.function
 def show_images(indices, max_images=10):
     indices = indices[:max_images]
-    images = mnist.data.reshape((-1, 28, 28))[indices]
+    _mnist = pymde.datasets.MNIST()
+    images = _mnist.data.reshape((-1, 28, 28))[indices]
     fig, axes = plt.subplots(1, len(indices))
     fig.set_size_inches(12.5, 1.5)
     if len(indices) > 1:
@@ -144,14 +148,15 @@ def show_images(indices, max_images=10):
 
 @app.cell
 def _(embedding):
-    indices = torch.arange(mnist.data.shape[0]).numpy()
+    _mnist = pymde.datasets.MNIST()
+    indices = torch.arange(_mnist.data.shape[0]).numpy()
 
     df = pd.DataFrame(
         {
             "index": indices,
             "x": embedding[:, 0],
             "y": embedding[:, 1],
-            "digit": mnist.attributes["digits"][indices],
+            "digit": _mnist.attributes["digits"][indices],
         }
     )
     return (df,)
