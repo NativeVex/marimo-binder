@@ -11,17 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      # NOTE: We intentionally use `docker build` here rather than `docker/build-push-action`.
+      # In practice we observed the action-based Buildx path can hang and then the runner dies
+      # without uploading logs, leaving the step stuck "in_progress".
       - name: Build image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          load: true
-          push: false
-          tags: marimo-binder:ci
+        run: docker build -t marimo-binder:ci .
 
   docker-smoke:
     runs-on: ubuntu-latest
