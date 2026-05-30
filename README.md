@@ -2,7 +2,16 @@
 
 Binder (launch directly into marimo UI):
 
-  https://mybinder.org/v2/gh/<OWNER>/<REPO>/<REF>?urlpath=proxy%2F2718%2F
+  mybinder.org (generic):
+    https://mybinder.org/v2/gh/<OWNER>/<REPO>/<REF>?urlpath=proxy%2F2718%2F
+
+  binderhub.saucy.haus (NativeVex):
+    app: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F2718%2F
+    dev: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F2719%2F
+
+  NOTE: BinderHub "gh" URLs take <ORG>/<REPO>/<REF>. Do NOT use an SSH-style remote like
+    /v2/gh/git@github.com:NativeVex/marimo-binder.git/<REF>
+  (that form is not resolvable on binderhub.saucy.haus).
 
 A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo notebook (`notebooks/algorithms/visualizing-embeddings.py`) in dev/editor mode.
 
@@ -21,8 +30,11 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
   - SHOULD be network-free and fast (deps are installed at image build time)
     - note: the demo notebook itself may fetch datasets at runtime
   - exports `PYTHONPATH="$PWD:$PYTHONPATH"` so `marimo_redirect.py` is importable
-  - starts marimo headless on port 2718 in *dev/editor view* (`marimo edit ... --headless --no-token &`)
+  - starts TWO marimo instances behind the JupyterHub proxy:
+    - app mode (default): `marimo run ...` on port 2718
+    - dev/editor: `marimo edit ...` on port 2719
     - default notebook: `notebooks/algorithms/visualizing-embeddings.py`
+  - with the `marimo_redirect` Jupyter Server extension enabled, `/` redirects to the app and `/dev` redirects to the editor
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`

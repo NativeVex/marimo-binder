@@ -26,5 +26,6 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
   set -euo pipefail
   /home/jovyan/.binder/start true
   sleep 1
+  ps aux | grep -F "marimo run notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
   ps aux | grep -F "marimo edit notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
 '
