@@ -48,6 +48,19 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("http://127.0.0.1:8484", smoke)
         self.assertIn("/home/jovyan/.binder/start true", smoke)
 
+    def test_lightweight_grist_runtime_smoke_uses_same_defaults(self) -> None:
+        smoke = read_text("scripts/grist-runtime-smoke.sh")
+
+        self.assertIn("GRIST_IMAGE:-gristlabs/grist:1.7.14", smoke)
+        self.assertIn("GRIST_IN_SERVICE=true", smoke)
+        self.assertIn("GRIST_DEFAULT_EMAIL=jovyan@example.invalid", smoke)
+        self.assertIn("GRIST_DATA_DIR=/tmp/grist-persist/docs", smoke)
+        self.assertIn("TYPEORM_DATABASE=/tmp/grist-persist/home.sqlite3", smoke)
+        self.assertIn("cd /grist && ./sandbox/run.sh", smoke)
+        self.assertIn("grist http status", smoke)
+        self.assertIn("BOOT KEY: )[[:alnum:]]+", smoke)
+        self.assertIn("[REDACTED]", smoke)
+
 
 if __name__ == "__main__":
     unittest.main()
