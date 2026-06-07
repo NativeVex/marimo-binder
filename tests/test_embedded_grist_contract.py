@@ -33,6 +33,8 @@ class EmbeddedGristContractTest(unittest.TestCase):
 
         self.assertIn("FROM gristlabs/grist:1.7.14 AS grist", dockerfile)
         self.assertIn("COPY --from=grist /grist /grist", dockerfile)
+        self.assertIn("mkdir -p /grist/static", dockerfile)
+        self.assertIn("COPY .binder/binder-url-prefix.js /grist/static/binder-url-prefix.js", dockerfile)
         self.assertIn("COPY --from=grist /node_modules /node_modules", dockerfile)
         self.assertIn("COPY --from=grist /usr/local/bin/node /usr/local/bin/node", dockerfile)
         self.assertIn("/grist/sandbox/pyodide", dockerfile)
@@ -99,6 +101,7 @@ class EmbeddedGristContractTest(unittest.TestCase):
 
     def test_start_script_launches_grist_with_binder_safe_defaults(self) -> None:
         start = read_text(".binder/start")
+        prefix_hook = read_text(".binder/binder-url-prefix.js")
 
         self.assertIn('APP_NOTEBOOK="${MARIMO_APP:-marimo_app.py}"', start)
         self.assertIn("GRIST_PORT=\"${GRIST_PORT:-8484}\"", start)
@@ -114,7 +117,15 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("mybinder.org exposes neither JUPYTERHUB_PUBLIC_URL nor JUPYTERHUB_HOST", start)
         self.assertIn('APP_STATIC_URL="${GRIST_PROXY_URL%/}"', start)
         self.assertIn('APP_STATIC_URL="${APP_STATIC_URL%/o/${GRIST_SINGLE_ORG}}"', start)
-        self.assertIn("export APP_HOME_URL APP_STATIC_URL", start)
+        self.assertIn("binder-url-prefix.js", start)
+        self.assertIn('GRIST_INCLUDE_CUSTOM_SCRIPT_URL="${APP_STATIC_URL%/}/v/unknown/binder-url-prefix.js"', start)
+        self.assertNotIn("cat > /grist/static/binder-url-prefix.js", start)
+        self.assertNotIn("mkdir -p /grist/static", start)
+        self.assertIn("window._urlStateLoadPage", prefix_hook)
+        self.assertIn("/user\\/[^/]+\\/proxy\\/[^/]+", prefix_hook)
+        self.assertIn("pushState", prefix_hook)
+        self.assertIn("replaceState", prefix_hook)
+        self.assertIn("export APP_HOME_URL APP_STATIC_URL GRIST_INCLUDE_CUSTOM_SCRIPT_URL", start)
         self.assertIn("cd /grist && ./sandbox/run.sh", start)
         self.assertRegex(start, re.compile(r"\n\) &", re.MULTILINE))
         self.assertIn("port 8484", start)
@@ -149,6 +160,9 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn('/proxy/8484/o/docs', smoke)
         self.assertIn('main.bundle.js', smoke)
         self.assertIn('asset status', smoke)
+        self.assertIn('binder-url-prefix.js', smoke)
+        self.assertIn('custom script status', smoke)
+        self.assertIn('_urlStateLoadPage', smoke)
         self.assertIn('Host: "public-binderhub.example.invalid"', smoke)
         self.assertIn('"X-Forwarded-Proto": "https,http"', smoke)
         self.assertIn("contains_grist", smoke)

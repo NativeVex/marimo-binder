@@ -152,6 +152,14 @@ async function main() {
       process.exit(1);
     }
   }
+  if (!page.body.includes("binder-url-prefix.js")) {
+    process.exit(1);
+  }
+  const customScript = await get("http://127.0.0.1:8484/v/unknown/binder-url-prefix.js");
+  console.log("custom script status", customScript.statusCode, "bytes", customScript.body.length);
+  if (customScript.statusCode !== 200 || !customScript.body.includes("_urlStateLoadPage")) {
+    process.exit(1);
+  }
 
   const createDoc = await postJson("http://127.0.0.1:8484/o/docs/api/docs", {}, pageHeaders);
   console.log("document create status", createDoc.statusCode, "body", createDoc.body.slice(0, 80));

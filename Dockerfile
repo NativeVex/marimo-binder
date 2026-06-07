@@ -58,6 +58,13 @@ ENV NODE_OPTIONS=--no-deprecation
 
 COPY --from=grist /grist /grist
 
+# Grist is served under JupyterHub's /user/<name>/proxy/<port>/ prefix.  Bake a
+# small client hook into Grist's served static bundle path so .binder/start only needs
+# to reference it at runtime; the Binder user should not need write access to
+# root-owned /grist.
+RUN mkdir -p /grist/static
+COPY .binder/binder-url-prefix.js /grist/static/binder-url-prefix.js
+
 # Grist's document sandbox is Python code copied from the upstream Grist
 # image.  Install the runtime sandbox deps needed for document creation/imports
 # without installing the whole upstream sandbox requirements file, which pins

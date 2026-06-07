@@ -88,13 +88,24 @@ if [ -z "${APP_STATIC_URL:-}" ]; then
   fi
 fi
 
+# Grist's client-side URL encoder assumes the app is mounted at the HTTP origin
+# root. JupyterHub exposes Binder services under `/user/<name>/proxy/<port>/`,
+# so document transitions such as "Blank document" would otherwise navigate to
+# `/doc/<id>` at the Hub root and land on a Hub 404. The Dockerfile bakes a tiny
+# early script into Grist's served static bundle path; at runtime we only point Grist at
+# that script, avoiding writes into root-owned `/grist` as the unprivileged
+# Binder user.
+if [ -z "${GRIST_INCLUDE_CUSTOM_SCRIPT_URL:-}" ] && [ -n "${APP_STATIC_URL:-}" ]; then
+  export GRIST_INCLUDE_CUSTOM_SCRIPT_URL="${APP_STATIC_URL%/}/v/unknown/binder-url-prefix.js"
+fi
+
 mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}"
 (
   export PORT="${GRIST_PORT}"
   export GRIST_IN_SERVICE GRIST_DEFAULT_EMAIL GRIST_DATA_DIR TYPEORM_DATABASE
   export GRIST_INST_DIR GRIST_HOST GRIST_ORG_IN_PATH GRIST_SINGLE_ORG GRIST_SINGLE_PORT
   export GRIST_SERVE_SAME_ORIGIN GRIST_SESSION_COOKIE NODE_OPTIONS
-  export APP_HOME_URL APP_STATIC_URL
+  export APP_HOME_URL APP_STATIC_URL GRIST_INCLUDE_CUSTOM_SCRIPT_URL
   cd /grist && ./sandbox/run.sh
 ) &
 
