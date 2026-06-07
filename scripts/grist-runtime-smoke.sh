@@ -27,31 +27,64 @@ cid=$(docker run -d --rm --entrypoint /bin/bash \
   -e GRIST_SESSION_COOKIE=grist_binder \
   -e NODE_OPTIONS=--no-deprecation \
   -e APP_HOME_URL="https://jupyterhub-internal.example.invalid/user/test/proxy/${PORT}" \
+  -e APP_STATIC_URL="http://127.0.0.1:${PORT}" \
   "${IMAGE}" -lc 'mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}" && cd /grist && ./sandbox/run.sh')
 
 for _ in $(seq 1 90); do
   if docker exec "${cid}" node - <<'NODE'
 const http = require("http");
 const port = process.env.PORT;
-const opts = {
-  hostname: "127.0.0.1",
-  port,
-  path: "/o/docs/",
-  headers: {
-    Host: "public-binderhub.example.invalid",
-    "X-Forwarded-Proto": "https,http",
-  },
+const pageUrl = "http://127.0.0.1:" + port + "/o/docs/";
+const pageHeaders = {
+  Host: "public-binderhub.example.invalid",
+  "X-Forwarded-Proto": "https,http",
 };
-http.get(opts, (r) => {
-  let body = "";
-  r.setEncoding("utf8");
-  r.on("data", chunk => { body += chunk; });
-  r.on("end", () => {
-    const ok = r.statusCode === 200 && body.toLowerCase().includes("grist");
-    console.log("grist http status", r.statusCode, "contains_grist", body.toLowerCase().includes("grist"));
-    process.exit(ok ? 0 : 1);
+
+function get(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    if (u.protocol !== "http:") {
+      reject(new Error("smoke only supports http asset probes, got " + u.protocol));
+      return;
+    }
+    const opts = {
+      hostname: u.hostname,
+      port: u.port,
+      path: u.pathname + u.search,
+      headers,
+    };
+    http.get(opts, (r) => {
+      let body = "";
+      r.setEncoding("utf8");
+      r.on("data", chunk => { body += chunk; });
+      r.on("end", () => resolve({ statusCode: r.statusCode, body }));
+    }).on("error", reject);
   });
-}).on("error", () => process.exit(1));
+}
+
+async function main() {
+  const page = await get(pageUrl, pageHeaders);
+  const containsGrist = page.body.toLowerCase().includes("grist");
+  const match = page.body.match(/<base\s+href="([^"]+)"/i);
+  const baseHref = match && match[1];
+  console.log("grist http status", page.statusCode, "contains_grist", containsGrist, "base_href", baseHref);
+  if (page.statusCode !== 200 || !containsGrist || !baseHref) {
+    process.exit(1);
+  }
+  for (const name of ["main.bundle.js", "bundle.css"]) {
+    const assetUrl = new URL(name, baseHref).href;
+    const asset = await get(assetUrl);
+    console.log("asset status", asset.statusCode, name, "bytes", asset.body.length);
+    if (asset.statusCode !== 200 || asset.body.length < 1000) {
+      process.exit(1);
+    }
+  }
+}
+
+main().then(() => process.exit(0)).catch((err) => {
+  console.error(err && err.message ? err.message : err);
+  process.exit(1);
+});
 NODE
   then
     echo "Grist runtime smoke passed for ${IMAGE} on port ${PORT}"

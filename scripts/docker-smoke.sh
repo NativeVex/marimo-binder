@@ -28,6 +28,7 @@ echo "== Smoke: entrypoint starts marimo and embedded Grist"
 docker run --rm --entrypoint /bin/bash \
   -e JUPYTERHUB_SERVICE_PREFIX=/user/test/ \
   -e JUPYTERHUB_SERVICE_URL=https://jupyterhub-internal.example.invalid/user/test/ \
+  -e APP_STATIC_URL=http://127.0.0.1:8484 \
   "${IMAGE}" -lc '
   set -euo pipefail
   START_LOG=/tmp/binder-start.log
@@ -68,25 +69,57 @@ docker run --rm --entrypoint /bin/bash \
   for i in $(seq 1 60); do
     if node - <<'NODE'
 const http = require("http");
-const opts = {
-  hostname: "127.0.0.1",
-  port: 8484,
-  path: "/o/docs/",
-  headers: {
-    Host: "public-binderhub.example.invalid",
-    "X-Forwarded-Proto": "https,http",
-  },
+const pageUrl = "http://127.0.0.1:8484/o/docs/";
+const pageHeaders = {
+  Host: "public-binderhub.example.invalid",
+  "X-Forwarded-Proto": "https,http",
 };
-http.get(opts, (r) => {
-  let body = "";
-  r.setEncoding("utf8");
-  r.on("data", chunk => { body += chunk; });
-  r.on("end", () => {
-    const containsGrist = body.toLowerCase().includes("grist");
-    console.log("grist http status", r.statusCode, "contains_grist", containsGrist);
-    process.exit(r.statusCode === 200 && containsGrist ? 0 : 1);
+
+function get(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    if (u.protocol !== "http:") {
+      reject(new Error("smoke only supports http asset probes, got " + u.protocol));
+      return;
+    }
+    const opts = {
+      hostname: u.hostname,
+      port: u.port,
+      path: u.pathname + u.search,
+      headers,
+    };
+    http.get(opts, (r) => {
+      let body = "";
+      r.setEncoding("utf8");
+      r.on("data", chunk => { body += chunk; });
+      r.on("end", () => resolve({ statusCode: r.statusCode, body }));
+    }).on("error", reject);
   });
-}).on("error", () => process.exit(1));
+}
+
+async function main() {
+  const page = await get(pageUrl, pageHeaders);
+  const containsGrist = page.body.toLowerCase().includes("grist");
+  const match = page.body.match(/<base\s+href="([^"]+)"/i);
+  const baseHref = match && match[1];
+  console.log("grist http status", page.statusCode, "contains_grist", containsGrist, "base_href", baseHref);
+  if (page.statusCode !== 200 || !containsGrist || !baseHref) {
+    process.exit(1);
+  }
+  for (const name of ["main.bundle.js", "bundle.css"]) {
+    const assetUrl = new URL(name, baseHref).href;
+    const asset = await get(assetUrl);
+    console.log("asset status", asset.statusCode, name, "bytes", asset.body.length);
+    if (asset.statusCode !== 200 || asset.body.length < 1000) {
+      process.exit(1);
+    }
+  }
+}
+
+main().then(() => process.exit(0)).catch((err) => {
+  console.error(err && err.message ? err.message : err);
+  process.exit(1);
+});
 NODE
     then
       break
