@@ -25,7 +25,10 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
 '
 
 echo "== Smoke: entrypoint starts marimo and embedded Grist"
-docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
+docker run --rm --entrypoint /bin/bash \
+  -e JUPYTERHUB_SERVICE_PREFIX=/user/test/ \
+  -e JUPYTERHUB_SERVICE_URL=https://jupyterhub.example.invalid/user/test/ \
+  "${IMAGE}" -lc '
   set -euo pipefail
   START_LOG=/tmp/binder-start.log
 
@@ -63,11 +66,33 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
   assert_process "node _build/stubs/app/server/server.js"
 
   for i in $(seq 1 60); do
-    if node -e "require(\"http\").get(\"http://127.0.0.1:8484\", r => { console.log(\"grist http status\", r.statusCode); process.exit(r.statusCode < 500 ? 0 : 1); }).on(\"error\", () => process.exit(1))"; then
+    if node - <<'NODE'
+const http = require("http");
+const opts = {
+  hostname: "127.0.0.1",
+  port: 8484,
+  path: "/o/docs/",
+  headers: {
+    Host: "jupyterhub.example.invalid",
+    "X-Forwarded-Proto": "https,http",
+  },
+};
+http.get(opts, (r) => {
+  let body = "";
+  r.setEncoding("utf8");
+  r.on("data", chunk => { body += chunk; });
+  r.on("end", () => {
+    const containsGrist = body.toLowerCase().includes("grist");
+    console.log("grist http status", r.statusCode, "contains_grist", containsGrist);
+    process.exit(r.statusCode === 200 && containsGrist ? 0 : 1);
+  });
+}).on("error", () => process.exit(1));
+NODE
+    then
       break
     fi
     if [ "${i}" = "60" ]; then
-      echo "Grist HTTP endpoint did not become ready at http://127.0.0.1:8484" >&2
+      echo "Grist HTTP endpoint did not become ready at http://127.0.0.1:8484/o/docs/" >&2
       redact_start_log
       exit 1
     fi

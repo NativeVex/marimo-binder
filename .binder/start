@@ -53,6 +53,12 @@ if [ -z "${APP_HOME_URL:-}" ]; then
     APP_HOME_URL="${JUPYTERHUB_PUBLIC_URL%/}/proxy/${GRIST_PORT}"
   elif [ -n "${JUPYTERHUB_HOST:-}" ] && [ -n "${JUPYTERHUB_SERVICE_PREFIX:-}" ]; then
     APP_HOME_URL="${JUPYTERHUB_HOST%/}${JUPYTERHUB_SERVICE_PREFIX%/}/proxy/${GRIST_PORT}"
+  elif [ -n "${JUPYTERHUB_SERVICE_URL:-}" ]; then
+    # mybinder.org exposes neither JUPYTERHUB_PUBLIC_URL nor JUPYTERHUB_HOST
+    # in current launches, but it does provide an absolute service URL.  Use it
+    # as the last Hub-derived absolute URL so Grist does not fall back to the
+    # comma-chained forwarded protocol header and raise "TypeError: Invalid URL".
+    APP_HOME_URL="${JUPYTERHUB_SERVICE_URL%/}/proxy/${GRIST_PORT}"
   fi
 fi
 
