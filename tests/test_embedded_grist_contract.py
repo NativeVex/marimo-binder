@@ -47,6 +47,35 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("TYPEORM_DATABASE=/home/jovyan/grist-persist/home.sqlite3", dockerfile)
         self.assertIn("GRIST_SINGLE_ORG=docs", dockerfile)
 
+    def test_dockerfile_installs_grist_runtime_sandbox_python_deps(self) -> None:
+        dockerfile = read_text(".binder/Dockerfile")
+
+        # Creating or importing documents exercises Grist's Python sandbox,
+        # whose code is copied from the upstream Grist image.  The final
+        # JupyterHub base image must also install the runtime sandbox deps;
+        # otherwise the UI can load but document creation fails when
+        # /grist/sandbox/grist/actions.py imports modules such as iso8601.
+        # Do not install the whole upstream sandbox requirements file: it pins
+        # old typing/debug packages that downgrade JupyterHub/IPython deps.
+        self.assertIn("COPY --from=grist /grist /grist", dockerfile)
+        self.assertNotIn("-r /grist/sandbox/requirements.txt", dockerfile)
+        for requirement in [
+            "iso8601==0.1.12",
+            "sortedcontainers==2.4.0",
+            "openpyxl==3.0.10",
+            "phonenumberslite==8.12.57",
+            "chardet==5.1.0",
+            "roman==3.3",
+        ]:
+            self.assertIn(requirement, dockerfile)
+
+    def test_smoke_script_checks_grist_sandbox_imports(self) -> None:
+        smoke = read_text("scripts/docker-smoke.sh")
+
+        self.assertIn("cd /grist/sandbox/grist", smoke)
+        self.assertIn("import iso8601", smoke)
+        self.assertIn("import actions", smoke)
+
     def test_dockerfile_handles_repo2docker_uid_collision(self) -> None:
         dockerfile = read_text(".binder/Dockerfile")
 

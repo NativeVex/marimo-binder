@@ -57,6 +57,19 @@ ENV GRIST_SESSION_COOKIE=grist_binder
 ENV NODE_OPTIONS=--no-deprecation
 
 COPY --from=grist /grist /grist
+
+# Grist's document sandbox is Python code copied from the upstream Grist
+# image.  Install the runtime sandbox deps needed for document creation/imports
+# without installing the whole upstream sandbox requirements file, which pins
+# old typing/debug packages that downgrade JupyterHub/IPython dependencies.
+RUN python3 -m pip install --no-cache-dir \
+    iso8601==0.1.12 \
+    sortedcontainers==2.4.0 \
+    openpyxl==3.0.10 \
+    phonenumberslite==8.12.57 \
+    chardet==5.1.0 \
+    roman==3.3
+
 COPY --from=grist /node_modules /node_modules
 COPY --from=grist /usr/local/bin/node /usr/local/bin/node
 

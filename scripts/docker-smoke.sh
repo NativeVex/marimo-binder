@@ -21,6 +21,8 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
   set -euo pipefail
   python3 -c "import marimo, marimo_jupyter_extension; print(\"marimo\", getattr(marimo, \"__version__\", \"?\")); print(\"marimo_jupyter_extension\", getattr(marimo_jupyter_extension, \"__version__\", \"?\"))"
   test "$(node -p "require(\"/grist/package.json\").version")" = "1.7.14"
+  cd /grist/sandbox/grist
+  python3 -c "import iso8601; import actions; print(\"grist sandbox imports OK\")"
   echo "gristlabs/grist 1.7.14"
 '
 
