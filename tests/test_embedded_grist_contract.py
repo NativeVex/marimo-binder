@@ -11,8 +11,25 @@ def read_text(relative_path: str) -> str:
 
 
 class EmbeddedGristContractTest(unittest.TestCase):
+    def test_binder_dockerfile_is_the_repo2docker_source_of_truth(self) -> None:
+        binder_dockerfile = read_text(".binder/Dockerfile")
+        root_dockerfile = read_text("Dockerfile")
+        workflow = read_text(".github/workflows/ci.yaml")
+        docker_build = read_text("scripts/docker-build.sh")
+        docker_smoke = read_text("scripts/docker-smoke.sh")
+
+        # When a `.binder/` directory exists, repo2docker discovers Dockerfile
+        # via `.binder/Dockerfile`; a root-level Dockerfile alone is ignored by
+        # BinderHub's standard repo2docker path.
+        self.assertEqual(binder_dockerfile, root_dockerfile)
+        self.assertIn("docker build -f .binder/Dockerfile", workflow)
+        self.assertIn("DOCKERFILE=${DOCKERFILE:-.binder/Dockerfile}", docker_build)
+        self.assertIn("docker build -f \"${DOCKERFILE}\"", docker_build)
+        self.assertIn("DOCKERFILE=${DOCKERFILE:-.binder/Dockerfile}", docker_smoke)
+        self.assertIn("docker build -f \"${DOCKERFILE}\"", docker_smoke)
+
     def test_dockerfile_embeds_pinned_grist_runtime(self) -> None:
-        dockerfile = read_text("Dockerfile")
+        dockerfile = read_text(".binder/Dockerfile")
 
         self.assertIn("FROM gristlabs/grist:1.7.14 AS grist", dockerfile)
         self.assertIn("COPY --from=grist /grist /grist", dockerfile)

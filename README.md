@@ -16,11 +16,11 @@ Binder (launch directly into marimo UI):
 
 A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo notebook (`notebooks/algorithms/visualizing-embeddings.py`) in dev/editor mode.
 
-This repo intentionally uses the **advanced repo2docker path**: it contains a `Dockerfile`. In repo2docker/Binder semantics, that means other config mechanisms (e.g. `.binder/*`) are *not* auto-wired unless the Dockerfile wires them explicitly.
+This repo intentionally uses the **advanced repo2docker path**: the Binder-visible Dockerfile lives at `.binder/Dockerfile`. When a `.binder/` directory exists, repo2docker looks there for its Dockerfile; a root-level Dockerfile alone is not enough for BinderHub. The root `Dockerfile` is kept as an exact local compatibility mirror, and CI builds `.binder/Dockerfile` explicitly.
 
 ## How it works (high level)
 
-- `Dockerfile`
+- `.binder/Dockerfile` (mirrored by root `Dockerfile`)
   - starts from the pinned `gristlabs/grist:1.7.14` image as a build stage and embeds the Grist runtime into the final image
   - builds the final runtime from `quay.io/jupyterhub/jupyterhub:5.4.6`
   - bakes Python deps into the image (from `requirements.txt`; pinned for reproducibility)
@@ -53,7 +53,7 @@ NOTE: the marimo app file is intentionally NOT named `notebook.py`, because that
 
 ## Local validation (no real JupyterHub required)
 
-Build the image (same semantics as CI):
+Build the image from `.binder/Dockerfile` (same semantics as CI/BinderHub):
 
   ./scripts/docker-build.sh
 
@@ -74,7 +74,7 @@ For local development, prefer the smoke check above unless you have a real Hub e
 
 GitHub Actions runs two jobs:
 
-- `docker-build`: builds the Dockerfile
+- `docker-build`: builds `.binder/Dockerfile`
 - `docker-smoke`: runs smoke checks against the built image
   - prints shipped versions (`marimo`, `marimo_jupyter_extension`, pinned `gristlabs/grist`)
   - asserts `.binder/start` actually starts marimo and embedded Grist (process-level + Grist HTTP check)

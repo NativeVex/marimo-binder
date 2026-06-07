@@ -2,6 +2,7 @@
 set -euo pipefail
 
 IMAGE=${IMAGE:-marimo-binder:local}
+DOCKERFILE=${DOCKERFILE:-.binder/Dockerfile}
 
 repo_root() {
   local here
@@ -13,7 +14,7 @@ ROOT=$(repo_root)
 cd -- "${ROOT}"
 
 # Build first (same as CI)
-docker build -t "${IMAGE}" .
+docker build -f "${DOCKERFILE}" -t "${IMAGE}" .
 
 echo "== Smoke: shipped versions (informational)"
 docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '

@@ -31,7 +31,7 @@ jobs:
       # In practice we observed the action-based Buildx path can hang and then the runner dies
       # without uploading logs, leaving the step stuck "in_progress".
       - name: Build image
-        run: docker build -t marimo-binder:ci .
+        run: docker build -f .binder/Dockerfile -t marimo-binder:ci .
 
   docker-smoke:
     runs-on: ubuntu-latest
