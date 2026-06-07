@@ -22,6 +22,7 @@ This repo intentionally uses the **advanced repo2docker path**: the Binder-visib
 
 - `.binder/Dockerfile` (mirrored by root `Dockerfile`)
   - starts from the pinned `gristlabs/grist:1.7.14` image as a build stage and embeds the Grist runtime into the final image
+  - prunes Grist build/dev/debug artifacts before the final copy (`pyodide`, TypeScript compiler/cache, source maps, declaration files, test directories) so the default Binder image stays smaller while preserving the embedded Grist runtime smoke contract
   - builds the final runtime from `quay.io/jupyterhub/jupyterhub:5.4.6`
   - bakes Python deps into the image (from lightweight `requirements.txt`; pinned for reproducibility)
   - sets:

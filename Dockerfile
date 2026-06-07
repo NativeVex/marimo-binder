@@ -1,5 +1,16 @@
 FROM gristlabs/grist:1.7.14 AS grist
 
+# Keep BinderHub push/post-build pressure lower by copying only runtime-relevant
+# Grist artifacts into the final image.  These are build/dev/debug artifacts not
+# needed by the embedded single-user Grist service exercised by smoke tests.
+RUN rm -rf /grist/sandbox/pyodide \
+    /grist/node_modules/typescript \
+    /grist/node_modules/.cache \
+    && find /grist -type f \
+        \( -name '*.map' -o -name '*.d.ts' -o -name '*.tsbuildinfo' \) -delete \
+    && find /grist -type d \
+        \( -name test -o -name tests -o -name __tests__ \) -prune -exec rm -rf '{}' +
+
 FROM quay.io/jupyterhub/jupyterhub:5.4.6
 
 ARG NB_USER=jovyan
