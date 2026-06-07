@@ -45,37 +45,47 @@ NODE_OPTIONS="${NODE_OPTIONS:---no-deprecation}"
 
 # Grist's URL builder cannot parse comma-separated X-Forwarded-Proto values
 # (for example the `https,http` chain observed behind JupyterHub +
-# jupyter-server-proxy).  Pin APP_HOME_URL to the externally visible proxy
-# URL when JupyterHub exposes it so Grist uses that protocol instead of the
-# forwarded-header chain.  This still leaves Grist under a subpath, so public
-# links should target /proxy/${GRIST_PORT}/o/docs/ rather than the Grist root.
+# jupyter-server-proxy).  Pin APP_HOME_URL to the externally visible docs org
+# URL when JupyterHub exposes it so Grist uses that protocol/path instead of the
+# forwarded-header chain.  Include /o/${GRIST_SINGLE_ORG}; otherwise Grist can
+# create a document successfully and then send the browser to /hub/doc/<id>
+# instead of the proxied /user/.../proxy/${GRIST_PORT}/o/docs/doc/<id> route.
 #
 # Grist renders a <base href="/v/<tag>/"> for its JS/CSS bundle by default.
 # Behind JupyterHub that absolute root path resolves at the Hub, not inside this
 # proxied Grist app, leaving the UI on "Loading... - Grist" while every static
-# asset 404s.  Pin APP_STATIC_URL to the same public proxy base so the bundle
-# loads from /user/.../proxy/${GRIST_PORT}/v/<tag>/.
+# asset 404s.  Pin APP_STATIC_URL to the public proxy base *without* /o/docs so
+# the bundle loads from /user/.../proxy/${GRIST_PORT}/v/<tag>/.
 #
 # Public BinderHub hosts may differ from the JupyterHub service URL visible to
 # the single-user process.  Pinning GRIST_SINGLE_ORG=docs keeps Grist from
 # treating the public Hub hostname as an unregistered custom domain and returning
 # "Domain not recognized" for /o/docs/ and its API routes.
+GRIST_PROXY_URL=""
 if [ -z "${APP_HOME_URL:-}" ]; then
   if [ -n "${JUPYTERHUB_PUBLIC_URL:-}" ]; then
-    APP_HOME_URL="${JUPYTERHUB_PUBLIC_URL%/}/proxy/${GRIST_PORT}"
+    GRIST_PROXY_URL="${JUPYTERHUB_PUBLIC_URL%/}/proxy/${GRIST_PORT}"
   elif [ -n "${JUPYTERHUB_HOST:-}" ] && [ -n "${JUPYTERHUB_SERVICE_PREFIX:-}" ]; then
-    APP_HOME_URL="${JUPYTERHUB_HOST%/}${JUPYTERHUB_SERVICE_PREFIX%/}/proxy/${GRIST_PORT}"
+    GRIST_PROXY_URL="${JUPYTERHUB_HOST%/}${JUPYTERHUB_SERVICE_PREFIX%/}/proxy/${GRIST_PORT}"
   elif [ -n "${JUPYTERHUB_SERVICE_URL:-}" ]; then
     # mybinder.org exposes neither JUPYTERHUB_PUBLIC_URL nor JUPYTERHUB_HOST
     # in current launches, but it does provide an absolute service URL.  Use it
     # as the last Hub-derived absolute URL so Grist does not fall back to the
     # comma-chained forwarded protocol header and raise "TypeError: Invalid URL".
-    APP_HOME_URL="${JUPYTERHUB_SERVICE_URL%/}/proxy/${GRIST_PORT}"
+    GRIST_PROXY_URL="${JUPYTERHUB_SERVICE_URL%/}/proxy/${GRIST_PORT}"
+  fi
+  if [ -n "${GRIST_PROXY_URL}" ]; then
+    APP_HOME_URL="${GRIST_PROXY_URL%/}/o/${GRIST_SINGLE_ORG}"
   fi
 fi
 
-if [ -z "${APP_STATIC_URL:-}" ] && [ -n "${APP_HOME_URL:-}" ]; then
-  APP_STATIC_URL="${APP_HOME_URL%/}"
+if [ -z "${APP_STATIC_URL:-}" ]; then
+  if [ -n "${GRIST_PROXY_URL:-}" ]; then
+    APP_STATIC_URL="${GRIST_PROXY_URL%/}"
+  elif [ -n "${APP_HOME_URL:-}" ]; then
+    APP_STATIC_URL="${APP_HOME_URL%/}"
+    APP_STATIC_URL="${APP_STATIC_URL%/o/${GRIST_SINGLE_ORG}}"
+  fi
 fi
 
 mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}"

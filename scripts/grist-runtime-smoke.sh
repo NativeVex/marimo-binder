@@ -26,7 +26,7 @@ cid=$(docker run -d --rm --entrypoint /bin/bash \
   -e GRIST_SERVE_SAME_ORIGIN=true \
   -e GRIST_SESSION_COOKIE=grist_binder \
   -e NODE_OPTIONS=--no-deprecation \
-  -e APP_HOME_URL="https://jupyterhub-internal.example.invalid/user/test/proxy/${PORT}" \
+  -e APP_HOME_URL="https://jupyterhub-internal.example.invalid/user/test/proxy/${PORT}/o/docs" \
   -e APP_STATIC_URL="http://127.0.0.1:${PORT}" \
   "${IMAGE}" -lc 'mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}" && cd /grist && ./sandbox/run.sh')
 
@@ -67,8 +67,13 @@ async function main() {
   const containsGrist = page.body.toLowerCase().includes("grist");
   const match = page.body.match(/<base\s+href="([^"]+)"/i);
   const baseHref = match && match[1];
-  console.log("grist http status", page.statusCode, "contains_grist", containsGrist, "base_href", baseHref);
-  if (page.statusCode !== 200 || !containsGrist || !baseHref) {
+  const configMatch = page.body.match(/window\.gristConfig\s*=\s*(\{.*?\});/s);
+  const homeUrl = configMatch && JSON.parse(configMatch[1]).homeUrl;
+  console.log("grist http status", page.statusCode, "contains_grist", containsGrist, "base_href", baseHref, "home_url", homeUrl);
+  if (page.statusCode !== 200 || !containsGrist || !baseHref || !homeUrl) {
+    process.exit(1);
+  }
+  if (!homeUrl.endsWith("/proxy/" + port + "/o/docs")) {
     process.exit(1);
   }
   for (const name of ["main.bundle.js", "bundle.css"]) {
