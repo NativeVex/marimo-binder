@@ -8,6 +8,7 @@ Binder (launch directly into marimo UI):
   binderhub.saucy.haus (NativeVex):
     app: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F2718%2F
     dev: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F2719%2F
+    grist: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F8484%2F
 
   NOTE: BinderHub "gh" URLs take <ORG>/<REPO>/<REF>. Do NOT use an SSH-style remote like
     /v2/gh/git@github.com:NativeVex/marimo-binder.git/<REF>
@@ -20,7 +21,8 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
 ## How it works (high level)
 
 - `Dockerfile`
-  - builds from `quay.io/jupyterhub/jupyterhub:5.4.6`
+  - starts from the pinned `gristlabs/grist:1.7.14` image as a build stage and embeds the Grist runtime into the final image
+  - builds the final runtime from `quay.io/jupyterhub/jupyterhub:5.4.6`
   - bakes Python deps into the image (from `requirements.txt`; pinned for reproducibility)
   - sets:
     - `ENTRYPOINT ["/home/jovyan/.binder/start"]`
@@ -34,7 +36,8 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
     - app mode (default): `marimo run ...` on port 2718
     - dev/editor: `marimo edit ...` on port 2719
     - default notebook: `notebooks/algorithms/visualizing-embeddings.py`
-  - with the `marimo_redirect` Jupyter Server extension enabled, `/` redirects to the app and `/dev` redirects to the editor
+  - starts embedded Grist on port 8484 with Binder-safe single-user defaults and persistent data under `/home/jovyan/grist-persist`
+  - with the `marimo_redirect` Jupyter Server extension enabled, `/` redirects to the app, `/dev` redirects to the editor, and `/grist` redirects to Grist
   - ends with `exec "$@"` so the image default CMD still runs
 
 - `.jupyter/jupyter_server_config.py`
@@ -43,6 +46,8 @@ This repo intentionally uses the **advanced repo2docker path**: it contains a `D
 
 - `marimo_redirect.py`
   - redirects `/` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/2718/` (JupyterHub proxy path)
+  - redirects `/dev` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/2719/`
+  - redirects `/grist` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/8484/`
 
 NOTE: the marimo app file is intentionally NOT named `notebook.py`, because that name shadows the `notebook` python package that `jupyter notebook` imports (breaking repo2docker local runs).
 
@@ -71,5 +76,5 @@ GitHub Actions runs two jobs:
 
 - `docker-build`: builds the Dockerfile
 - `docker-smoke`: runs smoke checks against the built image
-  - prints shipped versions (`marimo`, `marimo_jupyter_extension`)
-  - asserts `.binder/start` actually starts marimo (process-level check)
+  - prints shipped versions (`marimo`, `marimo_jupyter_extension`, pinned `gristlabs/grist`)
+  - asserts `.binder/start` actually starts marimo and embedded Grist (process-level + Grist HTTP check)

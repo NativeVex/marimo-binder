@@ -5,12 +5,19 @@ import tornado.web
 from jupyter_server.utils import url_path_join
 
 
+def _with_token(target: str, token: str) -> str:
+    if not token:
+        return target
+    return target + "?" + urlencode({"token": token})
+
+
 def _load_jupyter_server_extension(server_app):
     web_app = server_app.web_app
     base_url = web_app.settings.get("base_url", "/")
     hub_prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX", base_url)
     target = url_path_join(hub_prefix, "proxy/2718/")
     dev_target = url_path_join(hub_prefix, "proxy/2719/")
+    grist_target = url_path_join(hub_prefix, "proxy/8484/")
 
     class _RedirectToMarimo(tornado.web.RequestHandler):
         def get(self):
@@ -24,10 +31,7 @@ def _load_jupyter_server_extension(server_app):
             # - Under a real JupyterHub-authenticated browser session the token is
             #   irrelevant, so preserving it is harmless.
             token = self.get_query_argument("token", default="")
-            dest = target
-            if token:
-                dest = dest + "?" + urlencode({"token": token})
-            self.redirect(dest, permanent=False)
+            self.redirect(_with_token(target, token), permanent=False)
 
     class _RedirectToMarimoDev(tornado.web.RequestHandler):
         def get(self):
@@ -37,10 +41,15 @@ def _load_jupyter_server_extension(server_app):
             # environments that still rely on a ?token=... query param keep
             # working when the user switches into dev mode.
             token = self.get_query_argument("token", default="")
-            dest = dev_target
-            if token:
-                dest = dest + "?" + urlencode({"token": token})
-            self.redirect(dest, permanent=False)
+            self.redirect(_with_token(dev_target, token), permanent=False)
+
+    class _RedirectToGrist(tornado.web.RequestHandler):
+        def get(self):
+            # Grist is an embedded companion app served behind JupyterHub's
+            # proxy on port 8484.  Preserve the Jupyter token for the same
+            # local/non-Hub compatibility reason as the marimo redirects.
+            token = self.get_query_argument("token", default="")
+            self.redirect(_with_token(grist_target, token), permanent=False)
 
     # Key behavior: redirect the Jupyter Server *root* (/) into the Hub proxy path
     # for marimo. This avoids having to know the runtime user prefix ahead of time.
@@ -54,5 +63,6 @@ def _load_jupyter_server_extension(server_app):
         [
             (url_path_join(base_url, r"/?"), _RedirectToMarimo),
             (url_path_join(base_url, r"/dev/?"), _RedirectToMarimoDev),
+            (url_path_join(base_url, r"/grist/?"), _RedirectToGrist),
         ],
     )

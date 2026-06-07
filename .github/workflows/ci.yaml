@@ -6,6 +6,14 @@ on:
     branches: [master]
 
 jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Contract tests: embedded Grist wiring"
+        run: python3 -m unittest discover -s tests -p 'test*.py' -v
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
@@ -22,27 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image
-        run: docker build -t marimo-binder:ci .
-
-      - name: "Smoke: shipped versions (informational)"
-        run: |
-          set -euo pipefail
-          docker run --rm --entrypoint /bin/bash marimo-binder:ci -lc '
-            set -euo pipefail
-            python3 -c "import marimo, marimo_jupyter_extension; print(\"marimo\", getattr(marimo, \"__version__\", \"?\")); print(\"marimo_jupyter_extension\", getattr(marimo_jupyter_extension, \"__version__\", \"?\"))"
-          '
-
-      - name: "Smoke: entrypoint starts marimo"
-        run: |
-          set -euo pipefail
-          docker run --rm --entrypoint /bin/bash marimo-binder:ci -lc '
-            set -euo pipefail
-            /home/jovyan/.binder/start true
-            sleep 1
-            ps aux | grep -F "marimo run notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
-            ps aux | grep -F "marimo edit notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
-          '
+      - name: "Smoke: build and run image checks"
+        run: IMAGE=marimo-binder:ci ./scripts/docker-smoke.sh
 
   cml-comment:
     runs-on: ubuntu-latest
@@ -78,16 +67,19 @@ jobs:
 
           echo "mybinder.org (app): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
           echo "mybinder.org (dev): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2719%2F" >> report.md
+          echo "mybinder.org (grist): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F8484%2F" >> report.md
           echo "" >> report.md
           echo "binderhub.saucy.haus (app): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
           echo "binderhub.saucy.haus (dev): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2719%2F" >> report.md
+          echo "binderhub.saucy.haus (grist): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F8484%2F" >> report.md
 
           cat >> report.md <<'MD'
 
           Notes:
-          - CI `docker-smoke` verifies `.binder/start` starts BOTH:
+          - CI `docker-smoke` verifies `.binder/start` starts:
             - `marimo run notebooks/algorithms/visualizing-embeddings.py` (app, 2718)
             - `marimo edit notebooks/algorithms/visualizing-embeddings.py` (dev, 2719)
+            - embedded Grist (`gristlabs/grist:1.7.14`, 8484)
           - Binder builds from the branch/ref above; availability depends on Binder queue/build time.
           MD
 

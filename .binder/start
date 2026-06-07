@@ -7,6 +7,8 @@ set -euo pipefail
 # Ensure Jupyter Server can import marimo_redirect from this repo
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 
+APP_NOTEBOOK="${MARIMO_APP:-notebooks/algorithms/visualizing-embeddings.py}"
+
 # Start marimo behind Jupyter's proxy
 #
 # IMPORTANT: In Binder/JupyterHub the user is already authenticated upstream
@@ -17,9 +19,34 @@ export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 # Default to *app* mode on 2718.
 #
 # Dev mode remains available at /dev (served by a second marimo instance on 2719).
-marimo run notebooks/algorithms/visualizing-embeddings.py --host 0.0.0.0 --port 2718 --headless --no-token &
-marimo edit notebooks/algorithms/visualizing-embeddings.py --host 0.0.0.0 --port 2719 --headless --no-token &
+marimo run "${APP_NOTEBOOK}" --host 0.0.0.0 --port 2718 --headless --no-token &
+marimo edit "${APP_NOTEBOOK}" --host 0.0.0.0 --port 2719 --headless --no-token &
 
+# Start embedded Grist behind the same JupyterHub proxy on port 8484.
+#
+# Grist expects its listen port in PORT. Keep that scoped to the Grist
+# subprocess instead of exporting PORT globally before jupyterhub-singleuser.
+GRIST_PORT="${GRIST_PORT:-8484}"
+GRIST_IN_SERVICE="${GRIST_IN_SERVICE:-true}"
+GRIST_DEFAULT_EMAIL="${GRIST_DEFAULT_EMAIL:-jovyan@example.invalid}"
+GRIST_DATA_DIR="${GRIST_DATA_DIR:-${HOME}/grist-persist/docs}"
+TYPEORM_DATABASE="${TYPEORM_DATABASE:-${HOME}/grist-persist/home.sqlite3}"
+GRIST_INST_DIR="${GRIST_INST_DIR:-${HOME}/grist-persist}"
+GRIST_HOST="${GRIST_HOST:-0.0.0.0}"
+GRIST_ORG_IN_PATH="${GRIST_ORG_IN_PATH:-true}"
+GRIST_SINGLE_PORT="${GRIST_SINGLE_PORT:-true}"
+GRIST_SERVE_SAME_ORIGIN="${GRIST_SERVE_SAME_ORIGIN:-true}"
+GRIST_SESSION_COOKIE="${GRIST_SESSION_COOKIE:-grist_binder}"
+NODE_OPTIONS="${NODE_OPTIONS:---no-deprecation}"
+
+mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}"
+(
+  export PORT="${GRIST_PORT}"
+  export GRIST_IN_SERVICE GRIST_DEFAULT_EMAIL GRIST_DATA_DIR TYPEORM_DATABASE
+  export GRIST_INST_DIR GRIST_HOST GRIST_ORG_IN_PATH GRIST_SINGLE_PORT
+  export GRIST_SERVE_SAME_ORIGIN GRIST_SESSION_COOKIE NODE_OPTIONS
+  cd /grist && ./sandbox/run.sh
+) &
 
 # Hand off to the default CMD (jupyterhub singleuser / jupyter lab)
 exec "$@"
