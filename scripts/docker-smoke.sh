@@ -27,7 +27,13 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
 echo "== Smoke: entrypoint starts marimo and embedded Grist"
 docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
   set -euo pipefail
-  /home/jovyan/.binder/start true
+  START_LOG=/tmp/binder-start.log
+
+  redact_start_log() {
+    sed -E "s/(BOOT KEY: )[[:alnum:]]+/\\1[REDACTED]/g" "${START_LOG}" >&2 || true
+  }
+
+  /home/jovyan/.binder/start true >"${START_LOG}" 2>&1
 
   for i in $(seq 1 60); do
     if ps aux | grep -F "node _build/stubs/app/server/server.js" | grep -v grep >/dev/null; then
@@ -36,21 +42,33 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
     if [ "${i}" = "60" ]; then
       echo "Grist process did not start" >&2
       ps aux >&2
+      redact_start_log
       exit 1
     fi
     sleep 1
   done
 
-  ps aux | grep -F "marimo run notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
-  ps aux | grep -F "marimo edit notebooks/algorithms/visualizing-embeddings.py" | grep -v grep
-  ps aux | grep -F "node _build/stubs/app/server/server.js" | grep -v grep
+  assert_process() {
+    local pattern="$1"
+    if ! ps aux | grep -F "${pattern}" | grep -v grep; then
+      echo "Process not found: ${pattern}" >&2
+      ps aux >&2
+      redact_start_log
+      exit 1
+    fi
+  }
+
+  assert_process "marimo run marimo_app.py"
+  assert_process "marimo edit marimo_app.py"
+  assert_process "node _build/stubs/app/server/server.js"
 
   for i in $(seq 1 60); do
-    if python3 -c "import urllib.request; resp=urllib.request.urlopen(\"http://127.0.0.1:8484\", timeout=2); print(\"grist http status\", resp.status); raise SystemExit(0 if resp.status < 500 else 1)"; then
+    if node -e "require(\"http\").get(\"http://127.0.0.1:8484\", r => { console.log(\"grist http status\", r.statusCode); process.exit(r.statusCode < 500 ? 0 : 1); }).on(\"error\", () => process.exit(1))"; then
       break
     fi
     if [ "${i}" = "60" ]; then
       echo "Grist HTTP endpoint did not become ready at http://127.0.0.1:8484" >&2
+      redact_start_log
       exit 1
     fi
     sleep 1

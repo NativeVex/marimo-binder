@@ -55,6 +55,7 @@ class EmbeddedGristContractTest(unittest.TestCase):
     def test_start_script_launches_grist_with_binder_safe_defaults(self) -> None:
         start = read_text(".binder/start")
 
+        self.assertIn('APP_NOTEBOOK="${MARIMO_APP:-marimo_app.py}"', start)
         self.assertIn("GRIST_PORT=\"${GRIST_PORT:-8484}\"", start)
         self.assertIn("GRIST_IN_SERVICE=\"${GRIST_IN_SERVICE:-true}\"", start)
         self.assertIn("GRIST_DEFAULT_EMAIL=\"${GRIST_DEFAULT_EMAIL:-jovyan@example.invalid}\"", start)
@@ -74,9 +75,22 @@ class EmbeddedGristContractTest(unittest.TestCase):
         smoke = read_text("scripts/docker-smoke.sh")
 
         self.assertIn("gristlabs/grist 1.7.14", smoke)
+        self.assertIn("marimo run marimo_app.py", smoke)
+        self.assertIn("marimo edit marimo_app.py", smoke)
         self.assertIn("grep -F \"node _build/stubs/app/server/server.js\"", smoke)
         self.assertIn("http://127.0.0.1:8484", smoke)
         self.assertIn("/home/jovyan/.binder/start true", smoke)
+        self.assertIn("BOOT KEY: )[[:alnum:]]+", smoke)
+        self.assertIn("[REDACTED]", smoke)
+
+    def test_default_requirements_stay_lightweight(self) -> None:
+        requirements = read_text("requirements.txt")
+        heavy_requirements = read_text("requirements-heavy.txt")
+
+        self.assertNotIn("torch==", requirements)
+        self.assertNotIn("pymde==", requirements)
+        self.assertIn("torch==2.10.0", heavy_requirements)
+        self.assertIn("pymde==0.3.0", heavy_requirements)
 
     def test_lightweight_grist_runtime_smoke_uses_same_defaults(self) -> None:
         smoke = read_text("scripts/grist-runtime-smoke.sh")

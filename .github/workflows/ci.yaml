@@ -85,10 +85,11 @@ jobs:
 
           Notes:
           - CI `docker-smoke` verifies `.binder/start` starts:
-            - `marimo run notebooks/algorithms/visualizing-embeddings.py` (app, 2718)
-            - `marimo edit notebooks/algorithms/visualizing-embeddings.py` (dev, 2719)
+            - `marimo run marimo_app.py` (app, 2718)
+            - `marimo edit marimo_app.py` (dev, 2719)
             - embedded Grist (`gristlabs/grist:1.7.14`, 8484)
           - Binder builds from the branch/ref above; availability depends on Binder queue/build time.
+          - The default image intentionally stays lightweight; the optional embeddings demo uses `requirements-heavy.txt` plus an explicit `MARIMO_APP` override.
           MD
 
           # Local `act` runs are not expected to post PR comments; skip.

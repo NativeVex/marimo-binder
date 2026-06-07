@@ -7,7 +7,10 @@ set -euo pipefail
 # Ensure Jupyter Server can import marimo_redirect from this repo
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 
-APP_NOTEBOOK="${MARIMO_APP:-notebooks/algorithms/visualizing-embeddings.py}"
+# Keep the default Binder launch lightweight/reliable.  Heavy demos can still
+# be selected explicitly with MARIMO_APP after installing their optional deps
+# (see requirements-heavy.txt).
+APP_NOTEBOOK="${MARIMO_APP:-marimo_app.py}"
 
 # Start marimo behind Jupyter's proxy
 #

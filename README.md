@@ -14,7 +14,7 @@ Binder (launch directly into marimo UI):
     /v2/gh/git@github.com:NativeVex/marimo-binder.git/<REF>
   (that form is not resolvable on binderhub.saucy.haus).
 
-A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a marimo notebook (`notebooks/algorithms/visualizing-embeddings.py`) in dev/editor mode.
+A minimal Binder / JupyterHub-compatible repo that launches JupyterLab and auto-starts a lightweight marimo app (`marimo_app.py`) in app mode, with dev/editor mode and an optional heavyweight embeddings demo kept out of the default image path.
 
 This repo intentionally uses the **advanced repo2docker path**: the Binder-visible Dockerfile lives at `.binder/Dockerfile`. When a `.binder/` directory exists, repo2docker looks there for its Dockerfile; a root-level Dockerfile alone is not enough for BinderHub. The root `Dockerfile` is kept as an exact local compatibility mirror, and CI builds `.binder/Dockerfile` explicitly.
 
@@ -23,19 +23,20 @@ This repo intentionally uses the **advanced repo2docker path**: the Binder-visib
 - `.binder/Dockerfile` (mirrored by root `Dockerfile`)
   - starts from the pinned `gristlabs/grist:1.7.14` image as a build stage and embeds the Grist runtime into the final image
   - builds the final runtime from `quay.io/jupyterhub/jupyterhub:5.4.6`
-  - bakes Python deps into the image (from `requirements.txt`; pinned for reproducibility)
+  - bakes Python deps into the image (from lightweight `requirements.txt`; pinned for reproducibility)
   - sets:
     - `ENTRYPOINT ["/home/jovyan/.binder/start"]`
     - `CMD ["jupyterhub-singleuser"]`
 
 - `.binder/start`
   - SHOULD be network-free and fast (deps are installed at image build time)
-    - note: the demo notebook itself may fetch datasets at runtime
+    - note: optional heavy demos may fetch datasets at runtime, but they are not on the default path
   - exports `PYTHONPATH="$PWD:$PYTHONPATH"` so `marimo_redirect.py` is importable
   - starts TWO marimo instances behind the JupyterHub proxy:
     - app mode (default): `marimo run ...` on port 2718
     - dev/editor: `marimo edit ...` on port 2719
-    - default notebook: `notebooks/algorithms/visualizing-embeddings.py`
+    - default app: `marimo_app.py`
+    - optional heavy demo: `notebooks/algorithms/visualizing-embeddings.py` (install `requirements-heavy.txt` and set `MARIMO_APP` explicitly)
   - starts embedded Grist on port 8484 with Binder-safe single-user defaults and persistent data under `/home/jovyan/grist-persist`
   - with the `marimo_redirect` Jupyter Server extension enabled, `/` redirects to the app, `/dev` redirects to the editor, and `/grist` redirects to Grist
   - ends with `exec "$@"` so the image default CMD still runs
@@ -63,6 +64,7 @@ Smoke check (builds, then runs the same checks as CI):
 
 Notes:
 - Override the image tag with `IMAGE=...` (default: `marimo-binder:local`).
+- The default image intentionally does not install `requirements-heavy.txt`; use that file only for explicit heavy-demo builds/runs.
 
 ## Important limitation (expected)
 
@@ -78,3 +80,4 @@ GitHub Actions runs two jobs:
 - `docker-smoke`: runs smoke checks against the built image
   - prints shipped versions (`marimo`, `marimo_jupyter_extension`, pinned `gristlabs/grist`)
   - asserts `.binder/start` actually starts marimo and embedded Grist (process-level + Grist HTTP check)
+  - suppresses `.binder/start` service logs on success and redacts Grist one-time boot keys from failure logs
