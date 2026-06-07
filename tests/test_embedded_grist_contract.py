@@ -39,6 +39,19 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("GRIST_DATA_DIR=/home/jovyan/grist-persist/docs", dockerfile)
         self.assertIn("TYPEORM_DATABASE=/home/jovyan/grist-persist/home.sqlite3", dockerfile)
 
+    def test_dockerfile_handles_repo2docker_uid_collision(self) -> None:
+        dockerfile = read_text(".binder/Dockerfile")
+
+        # BinderHub/repo2docker commonly injects NB_UID=1000.  The base
+        # JupyterHub image already ships an Ubuntu user at that UID, so the
+        # Dockerfile must reuse/rename the existing user instead of blindly
+        # adding another UID 1000 account.
+        self.assertIn("ARG NB_UID=1000", dockerfile)
+        self.assertIn('existing_for_uid="$(getent passwd "${NB_UID}"', dockerfile)
+        self.assertIn("usermod --login", dockerfile)
+        self.assertIn("--move-home", dockerfile)
+        self.assertIn("adduser --disabled-password", dockerfile)
+
     def test_start_script_launches_grist_with_binder_safe_defaults(self) -> None:
         start = read_text(".binder/start")
 

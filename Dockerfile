@@ -3,16 +3,26 @@ FROM gristlabs/grist:1.7.14 AS grist
 FROM quay.io/jupyterhub/jupyterhub:5.4.6
 
 ARG NB_USER=jovyan
-ARG NB_UID=1001
+ARG NB_UID=1000
 
 ENV USER=${NB_USER}
 ENV NB_UID=${NB_UID}
 ENV HOME=/home/${NB_USER}
 
-RUN adduser --disabled-password \
-    --gecos "Default user" \
-    --uid ${NB_UID} \
-    ${NB_USER}
+# repo2docker/BinderHub commonly injects NB_UID=1000, while the upstream
+# JupyterHub image already has an Ubuntu user at UID 1000. Reuse/rename that
+# user when present instead of failing on a UID collision.
+RUN set -eux; \
+    existing_for_uid="$(getent passwd "${NB_UID}" | cut -d: -f1 || true)"; \
+    if id -u "${NB_USER}" >/dev/null 2>&1; then \
+        true; \
+    elif [ -n "${existing_for_uid}" ]; then \
+        usermod --login "${NB_USER}" --home "${HOME}" --move-home "${existing_for_uid}"; \
+    else \
+        adduser --disabled-password --gecos "Default user" --uid "${NB_UID}" "${NB_USER}"; \
+    fi; \
+    mkdir -p "${HOME}"; \
+    chown -R "${NB_UID}:${NB_UID}" "${HOME}"
 
 COPY requirements.txt ${HOME}/requirements.txt
 
