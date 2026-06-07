@@ -67,6 +67,9 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("GRIST_IN_SERVICE=\"${GRIST_IN_SERVICE:-true}\"", start)
         self.assertIn("GRIST_DEFAULT_EMAIL=\"${GRIST_DEFAULT_EMAIL:-jovyan@example.invalid}\"", start)
         self.assertIn('export PORT="${GRIST_PORT}"', start)
+        self.assertIn("APP_HOME_URL=\"${JUPYTERHUB_PUBLIC_URL%/}/proxy/${GRIST_PORT}\"", start)
+        self.assertIn("APP_HOME_URL=\"${JUPYTERHUB_HOST%/}${JUPYTERHUB_SERVICE_PREFIX%/}/proxy/${GRIST_PORT}\"", start)
+        self.assertIn("export APP_HOME_URL", start)
         self.assertIn("cd /grist && ./sandbox/run.sh", start)
         self.assertRegex(start, re.compile(r"\n\) &", re.MULTILINE))
         self.assertIn("port 8484", start)
@@ -74,9 +77,16 @@ class EmbeddedGristContractTest(unittest.TestCase):
     def test_redirect_extension_exposes_grist_entrypoint(self) -> None:
         redirect = read_text("marimo_redirect.py")
 
-        self.assertIn('grist_target = url_path_join(hub_prefix, "proxy/8484/")', redirect)
+        self.assertIn('grist_target = url_path_join(hub_prefix, "proxy/8484/o/docs/")', redirect)
         self.assertIn('url_path_join(base_url, r"/grist/?")', redirect)
         self.assertIn("_RedirectToGrist", redirect)
+
+    def test_docs_use_grist_docs_subpath_not_proxy_root(self) -> None:
+        readme = read_text("README.md")
+        workflow = read_text(".github/workflows/ci.yaml")
+
+        self.assertIn("urlpath=proxy%2F8484%2Fo%2Fdocs%2F", readme)
+        self.assertIn("urlpath=proxy%2F8484%2Fo%2Fdocs%2F", workflow)
 
     def test_smoke_script_checks_grist_process_and_http_health(self) -> None:
         smoke = read_text("scripts/docker-smoke.sh")
@@ -107,6 +117,9 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("GRIST_DEFAULT_EMAIL=jovyan@example.invalid", smoke)
         self.assertIn("GRIST_DATA_DIR=/tmp/grist-persist/docs", smoke)
         self.assertIn("TYPEORM_DATABASE=/tmp/grist-persist/home.sqlite3", smoke)
+        self.assertIn('APP_HOME_URL="https://jupyterhub.example.invalid/user/test/proxy/${PORT}"', smoke)
+        self.assertIn('"X-Forwarded-Proto": "https,http"', smoke)
+        self.assertIn("contains_grist", smoke)
         self.assertIn("cd /grist && ./sandbox/run.sh", smoke)
         self.assertIn("grist http status", smoke)
         self.assertIn("BOOT KEY: )[[:alnum:]]+", smoke)

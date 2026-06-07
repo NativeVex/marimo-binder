@@ -75,11 +75,11 @@ jobs:
 
           echo "mybinder.org (app): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
           echo "mybinder.org (dev): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2719%2F" >> report.md
-          echo "mybinder.org (grist): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F8484%2F" >> report.md
+          echo "mybinder.org (grist): https://mybinder.org/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F8484%2Fo%2Fdocs%2F" >> report.md
           echo "" >> report.md
           echo "binderhub.saucy.haus (app): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2718%2F" >> report.md
           echo "binderhub.saucy.haus (dev): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F2719%2F" >> report.md
-          echo "binderhub.saucy.haus (grist): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F8484%2F" >> report.md
+          echo "binderhub.saucy.haus (grist): https://binderhub.saucy.haus/v2/gh/${GITHUB_REPOSITORY}/${REF}?urlpath=proxy%2F8484%2Fo%2Fdocs%2F" >> report.md
 
           cat >> report.md <<'MD'
 

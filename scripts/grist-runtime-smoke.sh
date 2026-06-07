@@ -25,10 +25,34 @@ cid=$(docker run -d --rm --entrypoint /bin/bash \
   -e GRIST_SERVE_SAME_ORIGIN=true \
   -e GRIST_SESSION_COOKIE=grist_binder \
   -e NODE_OPTIONS=--no-deprecation \
+  -e APP_HOME_URL="https://jupyterhub.example.invalid/user/test/proxy/${PORT}" \
   "${IMAGE}" -lc 'mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}" && cd /grist && ./sandbox/run.sh')
 
 for _ in $(seq 1 90); do
-  if docker exec "${cid}" node -e 'require("http").get("http://127.0.0.1:" + process.env.PORT, r => { console.log("grist http status", r.statusCode); process.exit(r.statusCode < 500 ? 0 : 1); }).on("error", () => process.exit(1))'; then
+  if docker exec "${cid}" node - <<'NODE'
+const http = require("http");
+const port = process.env.PORT;
+const opts = {
+  hostname: "127.0.0.1",
+  port,
+  path: "/o/docs/",
+  headers: {
+    Host: "jupyterhub.example.invalid",
+    "X-Forwarded-Proto": "https,http",
+  },
+};
+http.get(opts, (r) => {
+  let body = "";
+  r.setEncoding("utf8");
+  r.on("data", chunk => { body += chunk; });
+  r.on("end", () => {
+    const ok = r.statusCode === 200 && body.toLowerCase().includes("grist");
+    console.log("grist http status", r.statusCode, "contains_grist", body.toLowerCase().includes("grist"));
+    process.exit(ok ? 0 : 1);
+  });
+}).on("error", () => process.exit(1));
+NODE
+  then
     echo "Grist runtime smoke passed for ${IMAGE} on port ${PORT}"
     exit 0
   fi

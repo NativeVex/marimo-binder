@@ -42,12 +42,27 @@ GRIST_SERVE_SAME_ORIGIN="${GRIST_SERVE_SAME_ORIGIN:-true}"
 GRIST_SESSION_COOKIE="${GRIST_SESSION_COOKIE:-grist_binder}"
 NODE_OPTIONS="${NODE_OPTIONS:---no-deprecation}"
 
+# Grist's URL builder cannot parse comma-separated X-Forwarded-Proto values
+# (for example the `https,http` chain observed behind JupyterHub +
+# jupyter-server-proxy).  Pin APP_HOME_URL to the externally visible proxy
+# URL when JupyterHub exposes it so Grist uses that protocol instead of the
+# forwarded-header chain.  This still leaves Grist under a subpath, so public
+# links should target /proxy/${GRIST_PORT}/o/docs/ rather than the Grist root.
+if [ -z "${APP_HOME_URL:-}" ]; then
+  if [ -n "${JUPYTERHUB_PUBLIC_URL:-}" ]; then
+    APP_HOME_URL="${JUPYTERHUB_PUBLIC_URL%/}/proxy/${GRIST_PORT}"
+  elif [ -n "${JUPYTERHUB_HOST:-}" ] && [ -n "${JUPYTERHUB_SERVICE_PREFIX:-}" ]; then
+    APP_HOME_URL="${JUPYTERHUB_HOST%/}${JUPYTERHUB_SERVICE_PREFIX%/}/proxy/${GRIST_PORT}"
+  fi
+fi
+
 mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}"
 (
   export PORT="${GRIST_PORT}"
   export GRIST_IN_SERVICE GRIST_DEFAULT_EMAIL GRIST_DATA_DIR TYPEORM_DATABASE
   export GRIST_INST_DIR GRIST_HOST GRIST_ORG_IN_PATH GRIST_SINGLE_PORT
   export GRIST_SERVE_SAME_ORIGIN GRIST_SESSION_COOKIE NODE_OPTIONS
+  export APP_HOME_URL
   cd /grist && ./sandbox/run.sh
 ) &
 

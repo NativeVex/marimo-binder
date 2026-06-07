@@ -8,7 +8,7 @@ Binder (launch directly into marimo UI):
   binderhub.saucy.haus (NativeVex):
     app: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F2718%2F
     dev: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F2719%2F
-    grist: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F8484%2F
+    grist: https://binderhub.saucy.haus/v2/gh/NativeVex/marimo-binder/<REF>?urlpath=proxy%2F8484%2Fo%2Fdocs%2F
 
   NOTE: BinderHub "gh" URLs take <ORG>/<REPO>/<REF>. Do NOT use an SSH-style remote like
     /v2/gh/git@github.com:NativeVex/marimo-binder.git/<REF>
@@ -49,7 +49,7 @@ This repo intentionally uses the **advanced repo2docker path**: the Binder-visib
 - `marimo_redirect.py`
   - redirects `/` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/2718/` (JupyterHub proxy path)
   - redirects `/dev` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/2719/`
-  - redirects `/grist` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/8484/`
+  - redirects `/grist` to `${JUPYTERHUB_SERVICE_PREFIX}proxy/8484/o/docs/`
 
 NOTE: the marimo app file is intentionally NOT named `notebook.py`, because that name shadows the `notebook` python package that `jupyter notebook` imports (breaking repo2docker local runs).
 

@@ -17,7 +17,7 @@ def _load_jupyter_server_extension(server_app):
     hub_prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX", base_url)
     target = url_path_join(hub_prefix, "proxy/2718/")
     dev_target = url_path_join(hub_prefix, "proxy/2719/")
-    grist_target = url_path_join(hub_prefix, "proxy/8484/")
+    grist_target = url_path_join(hub_prefix, "proxy/8484/o/docs/")
 
     class _RedirectToMarimo(tornado.web.RequestHandler):
         def get(self):
