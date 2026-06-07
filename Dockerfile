@@ -64,6 +64,8 @@ COPY --from=grist /grist /grist
 # old typing/debug packages that downgrade JupyterHub/IPython dependencies.
 RUN python3 -m pip install --no-cache-dir \
     iso8601==0.1.12 \
+    astroid==2.14.2 \
+    friendly-traceback==0.7.48 \
     sortedcontainers==2.4.0 \
     openpyxl==3.0.10 \
     phonenumberslite==8.12.57 \

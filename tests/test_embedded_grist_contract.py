@@ -54,13 +54,16 @@ class EmbeddedGristContractTest(unittest.TestCase):
         # whose code is copied from the upstream Grist image.  The final
         # JupyterHub base image must also install the runtime sandbox deps;
         # otherwise the UI can load but document creation fails when
-        # /grist/sandbox/grist/actions.py imports modules such as iso8601.
+        # /grist/sandbox/grist imports modules such as iso8601, astroid, and
+        # friendly_traceback.
         # Do not install the whole upstream sandbox requirements file: it pins
         # old typing/debug packages that downgrade JupyterHub/IPython deps.
         self.assertIn("COPY --from=grist /grist /grist", dockerfile)
         self.assertNotIn("-r /grist/sandbox/requirements.txt", dockerfile)
         for requirement in [
             "iso8601==0.1.12",
+            "astroid==2.14.2",
+            "friendly-traceback==0.7.48",
             "sortedcontainers==2.4.0",
             "openpyxl==3.0.10",
             "phonenumberslite==8.12.57",
@@ -74,7 +77,12 @@ class EmbeddedGristContractTest(unittest.TestCase):
 
         self.assertIn("cd /grist/sandbox/grist", smoke)
         self.assertIn("import iso8601", smoke)
+        self.assertIn("import astroid", smoke)
+        self.assertIn("import friendly_traceback", smoke)
         self.assertIn("import actions", smoke)
+        self.assertIn("import codebuilder", smoke)
+        self.assertIn("/o/docs/api/docs", smoke)
+        self.assertIn("document create status", smoke)
 
     def test_dockerfile_handles_repo2docker_uid_collision(self) -> None:
         dockerfile = read_text(".binder/Dockerfile")

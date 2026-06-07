@@ -22,7 +22,7 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
   python3 -c "import marimo, marimo_jupyter_extension; print(\"marimo\", getattr(marimo, \"__version__\", \"?\")); print(\"marimo_jupyter_extension\", getattr(marimo_jupyter_extension, \"__version__\", \"?\"))"
   test "$(node -p "require(\"/grist/package.json\").version")" = "1.7.14"
   cd /grist/sandbox/grist
-  python3 -c "import iso8601; import actions; print(\"grist sandbox imports OK\")"
+  python3 -c "import iso8601; import astroid; import friendly_traceback; import actions; import codebuilder; print(\"grist sandbox imports OK\")"
   echo "gristlabs/grist 1.7.14"
 '
 
@@ -99,6 +99,37 @@ function get(url, headers = {}) {
   });
 }
 
+function postJson(url, data, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    if (u.protocol !== "http:") {
+      reject(new Error("smoke only supports http API probes, got " + u.protocol));
+      return;
+    }
+    const body = JSON.stringify(data);
+    const opts = {
+      hostname: u.hostname,
+      port: u.port,
+      path: u.pathname + u.search,
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(body),
+      },
+    };
+    const req = http.request(opts, (r) => {
+      let responseBody = "";
+      r.setEncoding("utf8");
+      r.on("data", chunk => { responseBody += chunk; });
+      r.on("end", () => resolve({ statusCode: r.statusCode, body: responseBody }));
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 async function main() {
   const page = await get(pageUrl, pageHeaders);
   const containsGrist = page.body.toLowerCase().includes("grist");
@@ -115,6 +146,12 @@ async function main() {
     if (asset.statusCode !== 200 || asset.body.length < 1000) {
       process.exit(1);
     }
+  }
+
+  const createDoc = await postJson("http://127.0.0.1:8484/o/docs/api/docs", {}, pageHeaders);
+  console.log("document create status", createDoc.statusCode, "body", createDoc.body.slice(0, 80));
+  if (createDoc.statusCode !== 200 || !/^\"new~/.test(createDoc.body)) {
+    process.exit(1);
   }
 }
 
