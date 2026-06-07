@@ -21,11 +21,12 @@ cid=$(docker run -d --rm --entrypoint /bin/bash \
   -e GRIST_INST_DIR=/tmp/grist-persist \
   -e GRIST_HOST=0.0.0.0 \
   -e GRIST_ORG_IN_PATH=true \
+  -e GRIST_SINGLE_ORG=docs \
   -e GRIST_SINGLE_PORT=true \
   -e GRIST_SERVE_SAME_ORIGIN=true \
   -e GRIST_SESSION_COOKIE=grist_binder \
   -e NODE_OPTIONS=--no-deprecation \
-  -e APP_HOME_URL="https://jupyterhub.example.invalid/user/test/proxy/${PORT}" \
+  -e APP_HOME_URL="https://jupyterhub-internal.example.invalid/user/test/proxy/${PORT}" \
   "${IMAGE}" -lc 'mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}" && cd /grist && ./sandbox/run.sh')
 
 for _ in $(seq 1 90); do
@@ -37,7 +38,7 @@ const opts = {
   port,
   path: "/o/docs/",
   headers: {
-    Host: "jupyterhub.example.invalid",
+    Host: "public-binderhub.example.invalid",
     "X-Forwarded-Proto": "https,http",
   },
 };

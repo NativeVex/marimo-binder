@@ -27,7 +27,7 @@ docker run --rm --entrypoint /bin/bash "${IMAGE}" -lc '
 echo "== Smoke: entrypoint starts marimo and embedded Grist"
 docker run --rm --entrypoint /bin/bash \
   -e JUPYTERHUB_SERVICE_PREFIX=/user/test/ \
-  -e JUPYTERHUB_SERVICE_URL=https://jupyterhub.example.invalid/user/test/ \
+  -e JUPYTERHUB_SERVICE_URL=https://jupyterhub-internal.example.invalid/user/test/ \
   "${IMAGE}" -lc '
   set -euo pipefail
   START_LOG=/tmp/binder-start.log
@@ -73,7 +73,7 @@ const opts = {
   port: 8484,
   path: "/o/docs/",
   headers: {
-    Host: "jupyterhub.example.invalid",
+    Host: "public-binderhub.example.invalid",
     "X-Forwarded-Proto": "https,http",
   },
 };

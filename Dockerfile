@@ -50,6 +50,7 @@ ENV TYPEORM_DATABASE=/home/jovyan/grist-persist/home.sqlite3
 ENV GRIST_INST_DIR=/home/jovyan/grist-persist
 ENV GRIST_HOST=0.0.0.0
 ENV GRIST_ORG_IN_PATH=true
+ENV GRIST_SINGLE_ORG=docs
 ENV GRIST_SINGLE_PORT=true
 ENV GRIST_SERVE_SAME_ORIGIN=true
 ENV GRIST_SESSION_COOKIE=grist_binder
