@@ -157,7 +157,7 @@ async function main() {
   }
   const customScript = await get("http://127.0.0.1:8484/v/unknown/binder-url-prefix.js");
   console.log("custom script status", customScript.statusCode, "bytes", customScript.body.length);
-  if (customScript.statusCode !== 200 || !customScript.body.includes("_urlStateLoadPage")) {
+  if (customScript.statusCode !== 200 || !customScript.body.includes("_urlStateLoadPage") || !customScript.body.includes("/api/worker/") || !customScript.body.includes("docWorkerUrl") || !customScript.body.includes("XMLHttpRequest") || !customScript.body.includes("WebSocket")) {
     process.exit(1);
   }
 
