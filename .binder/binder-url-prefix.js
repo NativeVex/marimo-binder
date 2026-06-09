@@ -27,6 +27,62 @@
     return url.href;
   };
 
+  const rewriteAnchors = function (root) {
+    if (!root || !root.querySelectorAll) {
+      return;
+    }
+    for (const anchor of root.querySelectorAll("a[href]")) {
+      const rawHref = anchor.getAttribute("href");
+      if (!rawHref) {
+        continue;
+      }
+      const rewritten = rewrite(rawHref);
+      if (rewritten !== rawHref) {
+        anchor.setAttribute("href", rewritten);
+      }
+    }
+  };
+
+  rewriteAnchors(document);
+  document.addEventListener("DOMContentLoaded", function () {
+    rewriteAnchors(document);
+  });
+  if (window.MutationObserver) {
+    new window.MutationObserver(function (mutations) {
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              if (node.matches && node.matches("a[href]")) {
+                const rawHref = node.getAttribute("href");
+                if (rawHref) {
+                  const rewritten = rewrite(rawHref);
+                  if (rewritten !== rawHref) {
+                    node.setAttribute("href", rewritten);
+                  }
+                }
+              }
+              rewriteAnchors(node);
+            }
+          }
+        } else if (mutation.type === "attributes" && mutation.target && mutation.target.matches("a[href]")) {
+          const rawHref = mutation.target.getAttribute("href");
+          if (rawHref) {
+            const rewritten = rewrite(rawHref);
+            if (rewritten !== rawHref) {
+              mutation.target.setAttribute("href", rewritten);
+            }
+          }
+        }
+      }
+    }).observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["href"],
+    });
+  }
+
   const patchDocWorkerResponse = async function (response, requestUrl) {
     if (!requestUrl.pathname.includes("/api/worker/")) {
       return response;

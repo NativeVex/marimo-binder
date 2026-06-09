@@ -27,6 +27,7 @@ cid=$(docker run -d --rm --entrypoint /bin/bash \
   -e GRIST_SESSION_COOKIE=grist_binder \
   -e NODE_OPTIONS=--no-deprecation \
   -e APP_HOME_URL="https://jupyterhub-internal.example.invalid/user/test/proxy/${PORT}/o/docs" \
+  -e APP_HOME_INTERNAL_URL="http://127.0.0.1:${PORT}" \
   -e APP_STATIC_URL="http://127.0.0.1:${PORT}" \
   "${IMAGE}" -lc 'mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}" && cd /grist && ./sandbox/run.sh')
 

@@ -88,6 +88,11 @@ if [ -z "${APP_STATIC_URL:-}" ]; then
   fi
 fi
 
+# Grist server-side flows such as "Save Copy" may call back into the home API.
+# Keep those callbacks inside the same container; APP_HOME_URL remains the
+# browser-visible Hub proxy URL.
+APP_HOME_INTERNAL_URL="${APP_HOME_INTERNAL_URL:-http://127.0.0.1:${GRIST_PORT}}"
+
 # Grist's client-side URL encoder assumes the app is mounted at the HTTP origin
 # root. JupyterHub exposes Binder services under `/user/<name>/proxy/<port>/`,
 # so document transitions such as "Blank document" would otherwise navigate to
@@ -105,7 +110,7 @@ mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}"
   export GRIST_IN_SERVICE GRIST_DEFAULT_EMAIL GRIST_DATA_DIR TYPEORM_DATABASE
   export GRIST_INST_DIR GRIST_HOST GRIST_ORG_IN_PATH GRIST_SINGLE_ORG GRIST_SINGLE_PORT
   export GRIST_SERVE_SAME_ORIGIN GRIST_SESSION_COOKIE NODE_OPTIONS
-  export APP_HOME_URL APP_STATIC_URL GRIST_INCLUDE_CUSTOM_SCRIPT_URL
+  export APP_HOME_URL APP_HOME_INTERNAL_URL APP_STATIC_URL GRIST_INCLUDE_CUSTOM_SCRIPT_URL
   cd /grist && ./sandbox/run.sh
 ) &
 

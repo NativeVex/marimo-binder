@@ -31,6 +31,7 @@ docker run --rm --entrypoint /bin/bash \
   -e JUPYTERHUB_SERVICE_PREFIX=/user/test/ \
   -e JUPYTERHUB_SERVICE_URL=https://jupyterhub-internal.example.invalid/user/test/ \
   -e APP_STATIC_URL=http://127.0.0.1:8484 \
+  -e APP_HOME_INTERNAL_URL=http://127.0.0.1:8484 \
   "${IMAGE}" -lc '
   set -euo pipefail
   START_LOG=/tmp/binder-start.log

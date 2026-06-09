@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 
@@ -28,6 +29,43 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("DOCKERFILE=${DOCKERFILE:-.binder/Dockerfile}", docker_smoke)
         self.assertIn("docker build -f \"${DOCKERFILE}\"", docker_smoke)
 
+    def test_dockerfile_uses_public_quay_pyspark_base(self) -> None:
+        dockerfile = read_text(".binder/Dockerfile")
+        readme = read_text("README.md")
+        context = read_text(".context.md")
+
+        self.assertIn("ARG JUPYTER_BASE_IMAGE=quay.io/jupyter/pyspark-notebook:latest", dockerfile)
+        self.assertIn("FROM ${JUPYTER_BASE_IMAGE}", dockerfile)
+        old_final_base = "quay.io/jupyterhub/" + "jupyterhub:5.4.6"
+        self.assertNotIn(old_final_base, dockerfile)
+        self.assertIn("quay.io/jupyter/pyspark-notebook:latest", readme)
+        self.assertIn("quay.io/jupyter/pyspark-notebook:latest", context)
+
+    def test_public_repo_files_do_not_reference_private_project_context(self) -> None:
+        private_context = re.compile(
+            "|".join(
+                [
+                    re.escape("/mnt/" + "interop"),
+                    r"/home/(?!jovyan\b)[A-Za-z0-9._-]+",
+                    "env" + "_file",
+                ]
+            ),
+            re.IGNORECASE,
+        )
+        for relative_path in [
+            "Dockerfile",
+            ".binder/Dockerfile",
+            ".binder/start",
+            ".github/workflows/ci.yaml",
+            "README.md",
+            ".context.md",
+            "scripts/docker-build.sh",
+            "scripts/docker-smoke.sh",
+            "scripts/grist-runtime-smoke.sh",
+        ]:
+            with self.subTest(relative_path=relative_path):
+                self.assertIsNone(private_context.search(read_text(relative_path)))
+
     def test_dockerfile_embeds_pinned_grist_runtime(self) -> None:
         dockerfile = read_text(".binder/Dockerfile")
 
@@ -54,7 +92,7 @@ class EmbeddedGristContractTest(unittest.TestCase):
 
         # Creating or importing documents exercises Grist's Python sandbox,
         # whose code is copied from the upstream Grist image.  The final
-        # JupyterHub base image must also install the runtime sandbox deps;
+        # Jupyter/PySpark base image must also install the runtime sandbox deps;
         # otherwise the UI can load but document creation fails when
         # /grist/sandbox/grist imports modules such as iso8601, astroid, and
         # friendly_traceback.
@@ -89,10 +127,10 @@ class EmbeddedGristContractTest(unittest.TestCase):
     def test_dockerfile_handles_repo2docker_uid_collision(self) -> None:
         dockerfile = read_text(".binder/Dockerfile")
 
-        # BinderHub/repo2docker commonly injects NB_UID=1000.  The base
-        # JupyterHub image already ships an Ubuntu user at that UID, so the
-        # Dockerfile must reuse/rename the existing user instead of blindly
-        # adding another UID 1000 account.
+        # BinderHub/repo2docker commonly injects NB_UID=1000.  The public
+        # Jupyter Docker Stacks base normally already ships a jovyan user at
+        # that UID, so the Dockerfile must reuse/rename existing identities
+        # instead of blindly adding another UID 1000 account.
         self.assertIn("ARG NB_UID=1000", dockerfile)
         self.assertIn('existing_for_uid="$(getent passwd "${NB_UID}"', dockerfile)
         self.assertIn("usermod --login", dockerfile)
@@ -119,21 +157,82 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn('APP_STATIC_URL="${APP_STATIC_URL%/o/${GRIST_SINGLE_ORG}}"', start)
         self.assertIn("binder-url-prefix.js", start)
         self.assertIn('GRIST_INCLUDE_CUSTOM_SCRIPT_URL="${APP_STATIC_URL%/}/v/unknown/binder-url-prefix.js"', start)
+        self.assertIn('APP_HOME_INTERNAL_URL="${APP_HOME_INTERNAL_URL:-http://127.0.0.1:${GRIST_PORT}}"', start)
         self.assertNotIn("cat > /grist/static/binder-url-prefix.js", start)
         self.assertNotIn("mkdir -p /grist/static", start)
         self.assertIn("window._urlStateLoadPage", prefix_hook)
         self.assertIn("/user\\/[^/]+\\/proxy\\/[^/]+", prefix_hook)
         self.assertIn("pushState", prefix_hook)
         self.assertIn("replaceState", prefix_hook)
+        self.assertIn("querySelectorAll(\"a[href]\")", prefix_hook)
+        self.assertIn("MutationObserver", prefix_hook)
         self.assertIn("/api/worker/", prefix_hook)
         self.assertIn("docWorkerUrl", prefix_hook)
         self.assertIn("selfPrefix = null", prefix_hook)
         self.assertIn("XMLHttpRequest", prefix_hook)
         self.assertIn("WebSocket", prefix_hook)
-        self.assertIn("export APP_HOME_URL APP_STATIC_URL GRIST_INCLUDE_CUSTOM_SCRIPT_URL", start)
+        self.assertIn("export APP_HOME_URL APP_HOME_INTERNAL_URL APP_STATIC_URL GRIST_INCLUDE_CUSTOM_SCRIPT_URL", start)
         self.assertIn("cd /grist && ./sandbox/run.sh", start)
         self.assertRegex(start, re.compile(r"\n\) &", re.MULTILINE))
         self.assertIn("port 8484", start)
+
+    def test_prefix_hook_rewrites_root_origin_anchor_hrefs(self) -> None:
+        script = r'''
+const fs = require("fs");
+const vm = require("vm");
+const hook = fs.readFileSync(process.argv[1], "utf8");
+let observerCallback = null;
+function anchor(href) {
+  return {
+    nodeType: 1,
+    attrs: {href},
+    getAttribute(name) { return this.attrs[name]; },
+    setAttribute(name, value) { this.attrs[name] = value; },
+    matches(selector) { return selector === "a[href]"; },
+    querySelectorAll() { return []; },
+  };
+}
+const initialRootAnchor = anchor("/doc/new~abc");
+const initialProxyAnchor = anchor("/user/test/proxy/8484/doc/keep");
+const document = {
+  documentElement: {},
+  querySelectorAll(selector) { return selector === "a[href]" ? [initialRootAnchor, initialProxyAnchor] : []; },
+  addEventListener() {},
+};
+const context = {
+  URL,
+  Headers,
+  Request,
+  Response,
+  Node: {ELEMENT_NODE: 1},
+  document,
+  window: {
+    location: new URL("https://jupyterhub.saucy.haus/user/test/proxy/8484/o/docs/"),
+    history: {pushState() {}, replaceState() {}},
+    MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
+      observe() {}
+    },
+  },
+};
+vm.runInNewContext(hook, context, {filename: "binder-url-prefix.js"});
+if (initialRootAnchor.attrs.href !== "https://jupyterhub.saucy.haus/user/test/proxy/8484/doc/new~abc") {
+  throw new Error("root anchor was not rewritten: " + initialRootAnchor.attrs.href);
+}
+if (initialProxyAnchor.attrs.href !== "/user/test/proxy/8484/doc/keep") {
+  throw new Error("proxied anchor should remain unchanged: " + initialProxyAnchor.attrs.href);
+}
+const dynamicRootAnchor = anchor("/o/docs/api/docs");
+observerCallback([{type: "childList", addedNodes: [dynamicRootAnchor]}]);
+if (dynamicRootAnchor.attrs.href !== "https://jupyterhub.saucy.haus/user/test/proxy/8484/o/docs/api/docs") {
+  throw new Error("dynamic root anchor was not rewritten: " + dynamicRootAnchor.attrs.href);
+}
+'''
+        subprocess.run(
+            ["node", "-e", script, str(ROOT / ".binder/binder-url-prefix.js")],
+            check=True,
+            cwd=ROOT,
+        )
 
     def test_redirect_extension_exposes_grist_entrypoint(self) -> None:
         redirect = read_text("marimo_redirect.py")
@@ -160,6 +259,7 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("/o/docs/", smoke)
         self.assertIn("JUPYTERHUB_SERVICE_URL=https://jupyterhub-internal.example.invalid/user/test/", smoke)
         self.assertIn("APP_STATIC_URL=http://127.0.0.1:8484", smoke)
+        self.assertIn("APP_HOME_INTERNAL_URL=http://127.0.0.1:8484", smoke)
         self.assertIn('const baseHref = match && match[1];', smoke)
         self.assertIn('const homeUrl = configMatch && JSON.parse(configMatch[1]).homeUrl;', smoke)
         self.assertIn('/proxy/8484/o/docs', smoke)
@@ -194,6 +294,7 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("TYPEORM_DATABASE=/tmp/grist-persist/home.sqlite3", smoke)
         self.assertIn("GRIST_SINGLE_ORG=docs", smoke)
         self.assertIn('APP_HOME_URL="https://jupyterhub-internal.example.invalid/user/test/proxy/${PORT}/o/docs"', smoke)
+        self.assertIn('APP_HOME_INTERNAL_URL="http://127.0.0.1:${PORT}"', smoke)
         self.assertIn('APP_STATIC_URL="http://127.0.0.1:${PORT}"', smoke)
         self.assertIn('const baseHref = match && match[1];', smoke)
         self.assertIn('const homeUrl = configMatch && JSON.parse(configMatch[1]).homeUrl;', smoke)
