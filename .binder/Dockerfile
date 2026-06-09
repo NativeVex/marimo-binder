@@ -1,5 +1,3 @@
-ARG JUPYTER_BASE_IMAGE=quay.io/jupyterhub/jupyterhub:5.4.6
-
 FROM gristlabs/grist:1.7.14 AS grist
 
 # Keep BinderHub push/post-build pressure lower by copying only runtime-relevant
@@ -13,9 +11,7 @@ RUN rm -rf /grist/sandbox/pyodide \
     && find /grist -type d \
         \( -name test -o -name tests -o -name __tests__ \) -prune -exec rm -rf '{}' +
 
-FROM ${JUPYTER_BASE_IMAGE}
-
-USER root
+FROM quay.io/jupyterhub/jupyterhub:5.4.6
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
@@ -24,9 +20,9 @@ ENV USER=${NB_USER}
 ENV NB_UID=${NB_UID}
 ENV HOME=/home/${NB_USER}
 
-# repo2docker/BinderHub commonly injects NB_UID=1000, while some base images
-# already have an account at that UID. Reuse/rename the existing identity when
-# present instead of blindly adding another account.
+# repo2docker/BinderHub commonly injects NB_UID=1000, while the upstream
+# JupyterHub image already has an Ubuntu user at UID 1000. Reuse/rename that
+# user when present instead of failing on a UID collision.
 RUN set -eux; \
     existing_for_uid="$(getent passwd "${NB_UID}" | cut -d: -f1 || true)"; \
     if id -u "${NB_USER}" >/dev/null 2>&1; then \

@@ -34,8 +34,8 @@ class EmbeddedGristContractTest(unittest.TestCase):
         readme = read_text("README.md")
         context = read_text(".context.md")
 
-        self.assertIn("ARG JUPYTER_BASE_IMAGE=quay.io/jupyterhub/jupyterhub:5.4.6", dockerfile)
-        self.assertIn("FROM ${JUPYTER_BASE_IMAGE}", dockerfile)
+        self.assertIn("FROM quay.io/jupyterhub/jupyterhub:5.4.6", dockerfile)
+        self.assertNotIn("JUPYTER_BASE_IMAGE", dockerfile)
         self.assertNotIn("quay.io/jupyter/pyspark-notebook:latest", dockerfile)
         self.assertIn("quay.io/jupyterhub/jupyterhub:5.4.6", readme)
         self.assertIn("quay.io/jupyterhub/jupyterhub:5.4.6", context)
