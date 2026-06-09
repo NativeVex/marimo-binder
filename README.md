@@ -23,7 +23,7 @@ This repo intentionally uses the **advanced repo2docker path**: the Binder-visib
 - `.binder/Dockerfile` (mirrored by root `Dockerfile`)
   - starts from the pinned `gristlabs/grist:1.7.14` image as a build stage and embeds the Grist runtime into the final image
   - prunes Grist build/dev/debug artifacts before the final copy (`pyodide`, TypeScript compiler/cache, source maps, declaration files, test directories) so the default Binder image stays smaller while preserving the embedded Grist runtime smoke contract
-  - builds the final runtime from the public Jupyter Docker Stacks PySpark base, `quay.io/jupyter/pyspark-notebook:latest`, so the Binder image matches a common data-science/dev-container surface without including any project-specific data
+  - builds the final runtime from the lightweight JupyterHub base, `quay.io/jupyterhub/jupyterhub:5.4.6`; the PySpark/Jupyter Docker Stacks surface is intentionally not part of the default Binder image because it makes the saucy.haus push/post-build step time out
   - bakes Python deps into the image (from lightweight `requirements.txt`; pinned for reproducibility)
   - sets:
     - `ENTRYPOINT ["/home/jovyan/.binder/start"]`
@@ -65,7 +65,7 @@ Smoke check (builds, then runs the same checks as CI):
 
 Notes:
 - Override the image tag with `IMAGE=...` (default: `marimo-binder:local`).
-- The default image intentionally does not install `requirements-heavy.txt`; use that file only for explicit heavy-demo builds/runs.
+- The default image intentionally does not install `requirements-heavy.txt` or the PySpark Docker Stacks base; use those only for explicit heavy-demo builds/runs outside the default Binder URL.
 
 ## Important limitation (expected)
 

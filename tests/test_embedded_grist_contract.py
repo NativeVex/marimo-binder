@@ -29,17 +29,18 @@ class EmbeddedGristContractTest(unittest.TestCase):
         self.assertIn("DOCKERFILE=${DOCKERFILE:-.binder/Dockerfile}", docker_smoke)
         self.assertIn("docker build -f \"${DOCKERFILE}\"", docker_smoke)
 
-    def test_dockerfile_uses_public_quay_pyspark_base(self) -> None:
+    def test_dockerfile_uses_lightweight_default_base(self) -> None:
         dockerfile = read_text(".binder/Dockerfile")
         readme = read_text("README.md")
         context = read_text(".context.md")
 
-        self.assertIn("ARG JUPYTER_BASE_IMAGE=quay.io/jupyter/pyspark-notebook:latest", dockerfile)
+        self.assertIn("ARG JUPYTER_BASE_IMAGE=quay.io/jupyterhub/jupyterhub:5.4.6", dockerfile)
         self.assertIn("FROM ${JUPYTER_BASE_IMAGE}", dockerfile)
-        old_final_base = "quay.io/jupyterhub/" + "jupyterhub:5.4.6"
-        self.assertNotIn(old_final_base, dockerfile)
-        self.assertIn("quay.io/jupyter/pyspark-notebook:latest", readme)
-        self.assertIn("quay.io/jupyter/pyspark-notebook:latest", context)
+        self.assertNotIn("quay.io/jupyter/pyspark-notebook:latest", dockerfile)
+        self.assertIn("quay.io/jupyterhub/jupyterhub:5.4.6", readme)
+        self.assertIn("quay.io/jupyterhub/jupyterhub:5.4.6", context)
+        self.assertIn("PySpark", readme)
+        self.assertIn("PySpark", context)
 
     def test_public_repo_files_do_not_reference_private_project_context(self) -> None:
         private_context = re.compile(
@@ -92,7 +93,7 @@ class EmbeddedGristContractTest(unittest.TestCase):
 
         # Creating or importing documents exercises Grist's Python sandbox,
         # whose code is copied from the upstream Grist image.  The final
-        # Jupyter/PySpark base image must also install the runtime sandbox deps;
+        # JupyterHub base image must also install the runtime sandbox deps;
         # otherwise the UI can load but document creation fails when
         # /grist/sandbox/grist imports modules such as iso8601, astroid, and
         # friendly_traceback.
@@ -127,10 +128,10 @@ class EmbeddedGristContractTest(unittest.TestCase):
     def test_dockerfile_handles_repo2docker_uid_collision(self) -> None:
         dockerfile = read_text(".binder/Dockerfile")
 
-        # BinderHub/repo2docker commonly injects NB_UID=1000.  The public
-        # Jupyter Docker Stacks base normally already ships a jovyan user at
-        # that UID, so the Dockerfile must reuse/rename existing identities
-        # instead of blindly adding another UID 1000 account.
+        # BinderHub/repo2docker commonly injects NB_UID=1000.  Some base images
+        # already ship an account at that UID, so the Dockerfile must
+        # reuse/rename existing identities instead of blindly adding another
+        # UID 1000 account.
         self.assertIn("ARG NB_UID=1000", dockerfile)
         self.assertIn('existing_for_uid="$(getent passwd "${NB_UID}"', dockerfile)
         self.assertIn("usermod --login", dockerfile)

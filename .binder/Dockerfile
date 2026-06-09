@@ -1,4 +1,4 @@
-ARG JUPYTER_BASE_IMAGE=quay.io/jupyter/pyspark-notebook:latest
+ARG JUPYTER_BASE_IMAGE=quay.io/jupyterhub/jupyterhub:5.4.6
 
 FROM gristlabs/grist:1.7.14 AS grist
 
@@ -24,10 +24,9 @@ ENV USER=${NB_USER}
 ENV NB_UID=${NB_UID}
 ENV HOME=/home/${NB_USER}
 
-# The public Jupyter Docker Stacks PySpark image normally already provides the
-# jovyan user at UID 1000. repo2docker/BinderHub can still inject NB_UID/NB_USER
-# build args, so reuse/rename an existing UID owner instead of blindly adding
-# another account.
+# repo2docker/BinderHub commonly injects NB_UID=1000, while some base images
+# already have an account at that UID. Reuse/rename the existing identity when
+# present instead of blindly adding another account.
 RUN set -eux; \
     existing_for_uid="$(getent passwd "${NB_UID}" | cut -d: -f1 || true)"; \
     if id -u "${NB_USER}" >/dev/null 2>&1; then \
