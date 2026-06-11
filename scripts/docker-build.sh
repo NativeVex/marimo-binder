@@ -2,6 +2,7 @@
 set -euo pipefail
 
 IMAGE=${IMAGE:-marimo-binder:local}
+DOCKERFILE=${DOCKERFILE:-.binder/Dockerfile}
 
-# Build the repo's Dockerfile (matches CI semantics)
-docker build -t "${IMAGE}" .
+# Build the Binder/repo2docker Dockerfile (matches CI and BinderHub semantics).
+docker build -f "${DOCKERFILE}" -t "${IMAGE}" .

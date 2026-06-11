@@ -7,6 +7,11 @@ set -euo pipefail
 # Ensure Jupyter Server can import marimo_redirect from this repo
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 
+# Keep the default Binder launch lightweight/reliable.  Heavy demos can still
+# be selected explicitly with MARIMO_APP after installing their optional deps
+# (see requirements-heavy.txt).
+APP_NOTEBOOK="${MARIMO_APP:-marimo_app.py}"
+
 # Start marimo behind Jupyter's proxy
 #
 # IMPORTANT: In Binder/JupyterHub the user is already authenticated upstream
@@ -17,9 +22,97 @@ export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 # Default to *app* mode on 2718.
 #
 # Dev mode remains available at /dev (served by a second marimo instance on 2719).
-marimo run notebooks/algorithms/visualizing-embeddings.py --host 0.0.0.0 --port 2718 --headless --no-token &
-marimo edit notebooks/algorithms/visualizing-embeddings.py --host 0.0.0.0 --port 2719 --headless --no-token &
+marimo run "${APP_NOTEBOOK}" --host 0.0.0.0 --port 2718 --headless --no-token &
+marimo edit "${APP_NOTEBOOK}" --host 0.0.0.0 --port 2719 --headless --no-token &
 
+# Start embedded Grist behind the same JupyterHub proxy on port 8484.
+#
+# Grist expects its listen port in PORT. Keep that scoped to the Grist
+# subprocess instead of exporting PORT globally before jupyterhub-singleuser.
+GRIST_PORT="${GRIST_PORT:-8484}"
+GRIST_IN_SERVICE="${GRIST_IN_SERVICE:-true}"
+GRIST_DEFAULT_EMAIL="${GRIST_DEFAULT_EMAIL:-jovyan@example.invalid}"
+GRIST_DATA_DIR="${GRIST_DATA_DIR:-${HOME}/grist-persist/docs}"
+TYPEORM_DATABASE="${TYPEORM_DATABASE:-${HOME}/grist-persist/home.sqlite3}"
+GRIST_INST_DIR="${GRIST_INST_DIR:-${HOME}/grist-persist}"
+GRIST_HOST="${GRIST_HOST:-0.0.0.0}"
+GRIST_ORG_IN_PATH="${GRIST_ORG_IN_PATH:-true}"
+GRIST_SINGLE_ORG="${GRIST_SINGLE_ORG:-docs}"
+GRIST_SINGLE_PORT="${GRIST_SINGLE_PORT:-true}"
+GRIST_SERVE_SAME_ORIGIN="${GRIST_SERVE_SAME_ORIGIN:-true}"
+GRIST_SESSION_COOKIE="${GRIST_SESSION_COOKIE:-grist_binder}"
+NODE_OPTIONS="${NODE_OPTIONS:---no-deprecation}"
+
+# Grist's URL builder cannot parse comma-separated X-Forwarded-Proto values
+# (for example the `https,http` chain observed behind JupyterHub +
+# jupyter-server-proxy).  Pin APP_HOME_URL to the externally visible docs org
+# URL when JupyterHub exposes it so Grist uses that protocol/path instead of the
+# forwarded-header chain.  Include /o/${GRIST_SINGLE_ORG}; otherwise Grist can
+# create a document successfully and then send the browser to /hub/doc/<id>
+# instead of the proxied /user/.../proxy/${GRIST_PORT}/o/docs/doc/<id> route.
+#
+# Grist renders a <base href="/v/<tag>/"> for its JS/CSS bundle by default.
+# Behind JupyterHub that absolute root path resolves at the Hub, not inside this
+# proxied Grist app, leaving the UI on "Loading... - Grist" while every static
+# asset 404s.  Pin APP_STATIC_URL to the public proxy base *without* /o/docs so
+# the bundle loads from /user/.../proxy/${GRIST_PORT}/v/<tag>/.
+#
+# Public BinderHub hosts may differ from the JupyterHub service URL visible to
+# the single-user process.  Pinning GRIST_SINGLE_ORG=docs keeps Grist from
+# treating the public Hub hostname as an unregistered custom domain and returning
+# "Domain not recognized" for /o/docs/ and its API routes.
+GRIST_PROXY_URL=""
+if [ -z "${APP_HOME_URL:-}" ]; then
+  if [ -n "${JUPYTERHUB_PUBLIC_URL:-}" ]; then
+    GRIST_PROXY_URL="${JUPYTERHUB_PUBLIC_URL%/}/proxy/${GRIST_PORT}"
+  elif [ -n "${JUPYTERHUB_HOST:-}" ] && [ -n "${JUPYTERHUB_SERVICE_PREFIX:-}" ]; then
+    GRIST_PROXY_URL="${JUPYTERHUB_HOST%/}${JUPYTERHUB_SERVICE_PREFIX%/}/proxy/${GRIST_PORT}"
+  elif [ -n "${JUPYTERHUB_SERVICE_URL:-}" ]; then
+    # mybinder.org exposes neither JUPYTERHUB_PUBLIC_URL nor JUPYTERHUB_HOST
+    # in current launches, but it does provide an absolute service URL.  Use it
+    # as the last Hub-derived absolute URL so Grist does not fall back to the
+    # comma-chained forwarded protocol header and raise "TypeError: Invalid URL".
+    GRIST_PROXY_URL="${JUPYTERHUB_SERVICE_URL%/}/proxy/${GRIST_PORT}"
+  fi
+  if [ -n "${GRIST_PROXY_URL}" ]; then
+    APP_HOME_URL="${GRIST_PROXY_URL%/}/o/${GRIST_SINGLE_ORG}"
+  fi
+fi
+
+if [ -z "${APP_STATIC_URL:-}" ]; then
+  if [ -n "${GRIST_PROXY_URL:-}" ]; then
+    APP_STATIC_URL="${GRIST_PROXY_URL%/}"
+  elif [ -n "${APP_HOME_URL:-}" ]; then
+    APP_STATIC_URL="${APP_HOME_URL%/}"
+    APP_STATIC_URL="${APP_STATIC_URL%/o/${GRIST_SINGLE_ORG}}"
+  fi
+fi
+
+# Grist server-side flows such as "Save Copy" may call back into the home API.
+# Keep those callbacks inside the same container; APP_HOME_URL remains the
+# browser-visible Hub proxy URL.
+APP_HOME_INTERNAL_URL="${APP_HOME_INTERNAL_URL:-http://127.0.0.1:${GRIST_PORT}}"
+
+# Grist's client-side URL encoder assumes the app is mounted at the HTTP origin
+# root. JupyterHub exposes Binder services under `/user/<name>/proxy/<port>/`,
+# so document transitions such as "Blank document" would otherwise navigate to
+# `/doc/<id>` at the Hub root and land on a Hub 404. The Dockerfile bakes a tiny
+# early script into Grist's served static bundle path; at runtime we only point Grist at
+# that script, avoiding writes into root-owned `/grist` as the unprivileged
+# Binder user.
+if [ -z "${GRIST_INCLUDE_CUSTOM_SCRIPT_URL:-}" ] && [ -n "${APP_STATIC_URL:-}" ]; then
+  export GRIST_INCLUDE_CUSTOM_SCRIPT_URL="${APP_STATIC_URL%/}/v/unknown/binder-url-prefix.js"
+fi
+
+mkdir -p "${GRIST_DATA_DIR}" "${GRIST_INST_DIR}"
+(
+  export PORT="${GRIST_PORT}"
+  export GRIST_IN_SERVICE GRIST_DEFAULT_EMAIL GRIST_DATA_DIR TYPEORM_DATABASE
+  export GRIST_INST_DIR GRIST_HOST GRIST_ORG_IN_PATH GRIST_SINGLE_ORG GRIST_SINGLE_PORT
+  export GRIST_SERVE_SAME_ORIGIN GRIST_SESSION_COOKIE NODE_OPTIONS
+  export APP_HOME_URL APP_HOME_INTERNAL_URL APP_STATIC_URL GRIST_INCLUDE_CUSTOM_SCRIPT_URL
+  cd /grist && ./sandbox/run.sh
+) &
 
 # Hand off to the default CMD (jupyterhub singleuser / jupyter lab)
 exec "$@"

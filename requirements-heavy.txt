@@ -1,0 +1,8 @@
+# Optional heavyweight demo deps (not installed in the default Binder image).
+#
+# Use this for the visualizing-embeddings marimo notebook when you explicitly
+# want the ML demo rather than the lightweight default Binder app.
+matplotlib==3.10.8
+pandas==3.0.0
+pymde==0.3.0
+torch==2.10.0
