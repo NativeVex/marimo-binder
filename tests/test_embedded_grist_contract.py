@@ -235,6 +235,106 @@ if (dynamicRootAnchor.attrs.href !== "https://jupyterhub.saucy.haus/user/test/pr
             cwd=ROOT,
         )
 
+    def test_prefix_hook_fences_guest_save_and_auth_controls(self) -> None:
+        script = r'''
+const fs = require("fs");
+const vm = require("vm");
+const hook = fs.readFileSync(process.argv[1], "utf8");
+let observerCallback = null;
+let clickCapture = null;
+function makeElement({tag = "button", href = undefined, text = "", ariaLabel = undefined} = {}) {
+  const element = {
+    nodeType: 1,
+    tagName: tag.toUpperCase(),
+    attrs: {},
+    style: {},
+    disabled: false,
+    textContent: text,
+    getAttribute(name) { return this.attrs[name]; },
+    setAttribute(name, value) { this.attrs[name] = String(value); },
+    matches(selector) {
+      return selector.split(",").some((part) => {
+        part = part.trim();
+        if (part === "button") { return this.tagName === "BUTTON"; }
+        if (part === "a[href]") { return this.tagName === "A" && this.attrs.href !== undefined; }
+        if (part === "[role='button']" || part === '[role="button"]') { return this.attrs.role === "button"; }
+        if (part === "[aria-label]") { return this.attrs["aria-label"] !== undefined; }
+        return false;
+      });
+    },
+    closest(selector) { return this.matches(selector) ? this : null; },
+    querySelectorAll() { return []; },
+  };
+  if (href !== undefined) { element.attrs.href = href; }
+  if (ariaLabel !== undefined) { element.attrs["aria-label"] = ariaLabel; }
+  return element;
+}
+const saveButton = makeElement({tag: "button", text: "Save Document"});
+const signInLink = makeElement({tag: "a", href: "/signin?next=%2Fuser%2Ftest%2Fproxy%2F8484%2Fdoc%2Fnew~abc", text: "Sign in"});
+const document = {
+  documentElement: {},
+  querySelectorAll(selector) {
+    return [saveButton, signInLink].filter((node) => node.matches(selector));
+  },
+  addEventListener(type, callback, options) {
+    if (type === "click" && (options === true || (options && options.capture))) {
+      clickCapture = callback;
+    }
+  },
+};
+const context = {
+  URL,
+  Headers,
+  Request,
+  Response,
+  Node: {ELEMENT_NODE: 1},
+  document,
+  window: {
+    location: new URL("https://jupyterhub.saucy.haus/user/test/proxy/8484/doc/new~abc"),
+    history: {pushState() {}, replaceState() {}},
+    MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
+      observe() {}
+    },
+  },
+};
+vm.runInNewContext(hook, context, {filename: "binder-url-prefix.js"});
+for (const node of [saveButton, signInLink]) {
+  if (node.attrs["data-binder-grist-fenced"] !== "true") {
+    throw new Error("guest save/auth control was not fenced: " + node.textContent);
+  }
+  if (node.style.display !== "none") {
+    throw new Error("guest save/auth control was not hidden: " + node.textContent);
+  }
+}
+if (!saveButton.disabled) {
+  throw new Error("Save Document button should be disabled");
+}
+if (!clickCapture) {
+  throw new Error("document capture click fence was not installed");
+}
+const event = {
+  target: saveButton,
+  preventDefault() { this.defaultPrevented = true; },
+  stopPropagation() { this.stopped = true; },
+  stopImmediatePropagation() { this.immediateStopped = true; },
+};
+clickCapture(event);
+if (!event.defaultPrevented || !event.immediateStopped) {
+  throw new Error("guest save click was not stopped before Grist can hard-navigate");
+}
+const dynamicSaveButton = makeElement({tag: "button", text: "Save Document"});
+observerCallback([{type: "childList", addedNodes: [dynamicSaveButton]}]);
+if (dynamicSaveButton.attrs["data-binder-grist-fenced"] !== "true" || dynamicSaveButton.style.display !== "none") {
+  throw new Error("dynamic Save Document button was not fenced");
+}
+'''
+        subprocess.run(
+            ["node", "-e", script, str(ROOT / ".binder/binder-url-prefix.js")],
+            check=True,
+            cwd=ROOT,
+        )
+
     def test_redirect_extension_exposes_grist_entrypoint(self) -> None:
         redirect = read_text("marimo_redirect.py")
 

@@ -38,7 +38,7 @@ This repo intentionally uses the **advanced repo2docker path**: the Binder-visib
     - dev/editor: `marimo edit ...` on port 2719
     - default app: `marimo_app.py`
     - optional heavy demo: `notebooks/algorithms/visualizing-embeddings.py` (install `requirements-heavy.txt` and set `MARIMO_APP` explicitly)
-  - starts embedded Grist on port 8484 with Binder-safe single-user defaults and persistent data under `/home/jovyan/grist-persist`
+  - starts embedded Grist on port 8484 with Binder-safe single-user defaults and runtime-local data under `/home/jovyan/grist-persist`; this Binder sidecar is for ephemeral stakeholder edits, so guest `Save Document` / auth surfaces are fenced rather than treated as durable Grist persistence
   - with the `marimo_redirect` Jupyter Server extension enabled, `/` redirects to the app, `/dev` redirects to the editor, and `/grist` redirects to Grist
   - ends with `exec "$@"` so the image default CMD still runs
 

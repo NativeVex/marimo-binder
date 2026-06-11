@@ -43,10 +43,73 @@
     }
   };
 
+  const guestSaveAndAuthSelector = "button, a[href], [role='button'], [aria-label]";
+  const labelFor = function (element) {
+    return [
+      element && element.textContent,
+      element && element.innerText,
+      element && element.getAttribute && element.getAttribute("aria-label"),
+      element && element.getAttribute && element.getAttribute("title"),
+    ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  };
+  const isGuestSaveOrAuthControl = function (element) {
+    if (!element || !element.matches || !element.getAttribute || !element.matches(guestSaveAndAuthSelector)) {
+      return false;
+    }
+    if (element.getAttribute("data-binder-grist-fenced") === "true") {
+      return true;
+    }
+    const rawHref = element.getAttribute("href") || "";
+    const label = labelFor(element);
+    return /^(Save Document|Sign in|Sign up)$/i.test(label) || /^\/(signin|login|signup)([/?#]|$)/i.test(rawHref);
+  };
+  const fenceGuestSaveOrAuthControl = function (element) {
+    if (!isGuestSaveOrAuthControl(element)) {
+      return false;
+    }
+    element.setAttribute("data-binder-grist-fenced", "true");
+    element.setAttribute("aria-disabled", "true");
+    element.setAttribute("tabindex", "-1");
+    element.setAttribute("title", "Disabled in this ephemeral Binder Grist sidecar");
+    if ("disabled" in element) {
+      element.disabled = true;
+    }
+    if (element.style) {
+      element.style.display = "none";
+    }
+    return true;
+  };
+  const fenceGuestSaveAndAuthSurfaces = function (root) {
+    if (!root) {
+      return;
+    }
+    if (root.matches) {
+      fenceGuestSaveOrAuthControl(root);
+    }
+    if (!root.querySelectorAll) {
+      return;
+    }
+    for (const element of root.querySelectorAll(guestSaveAndAuthSelector)) {
+      fenceGuestSaveOrAuthControl(element);
+    }
+  };
+
   rewriteAnchors(document);
+  fenceGuestSaveAndAuthSurfaces(document);
   document.addEventListener("DOMContentLoaded", function () {
     rewriteAnchors(document);
+    fenceGuestSaveAndAuthSurfaces(document);
   });
+  document.addEventListener("click", function (event) {
+    const target = event && event.target;
+    const control = target && target.closest ? target.closest(guestSaveAndAuthSelector) : target;
+    if (!fenceGuestSaveOrAuthControl(control)) {
+      return;
+    }
+    if (event.preventDefault) { event.preventDefault(); }
+    if (event.stopPropagation) { event.stopPropagation(); }
+    if (event.stopImmediatePropagation) { event.stopImmediatePropagation(); }
+  }, true);
   if (window.MutationObserver) {
     new window.MutationObserver(function (mutations) {
       for (const mutation of mutations) {
@@ -62,6 +125,7 @@
                   }
                 }
               }
+              fenceGuestSaveAndAuthSurfaces(node);
               rewriteAnchors(node);
             }
           }
@@ -73,6 +137,7 @@
               mutation.target.setAttribute("href", rewritten);
             }
           }
+          fenceGuestSaveAndAuthSurfaces(mutation.target);
         }
       }
     }).observe(document.documentElement, {
